@@ -1,5 +1,5 @@
-import { PlusCircle, BarChart3, LogOut, Zap, ArrowLeft } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { PlusCircle, BarChart3, LogOut, Zap, ArrowLeft } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -11,13 +11,13 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   useSidebar,
-} from '@/components/ui/sidebar';
-import { NavLink } from '@/components/NavLink';
-import { useAuth } from '@/contexts/AuthContext';
+} from "@/components/ui/sidebar";
+import { NavLink } from "@/components/NavLink";
+import { useAuth } from "@/contexts/AuthContext";
 
 const menuItems = [
-  { title: 'Create Event', url: '/admin/create', icon: PlusCircle },
-  { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
+  { title: "Create Event", url: "/admin/create", icon: PlusCircle },
+  { title: "Analytics", url: "/admin/analytics", icon: BarChart3 },
 ];
 
 export function AdminSidebar() {
@@ -25,22 +25,24 @@ export function AdminSidebar() {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const collapsed = state === 'collapsed';
+  const collapsed = state === "collapsed";
 
   const handleLogout = async () => {
     await logout();
-    navigate('/');
+    navigate("/");
   };
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border p-4">
+      <SidebarHeader className="border-b border-sidebar-border h-16 p-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg text-white">
             <Zap className="h-5 w-5" />
           </div>
           {!collapsed && (
-            <span className="text-lg font-bold text-sidebar-foreground">Admin Panel</span>
+            <span className="text-lg font-bold text-sidebar-foreground">
+              HackHub
+            </span>
           )}
         </div>
       </SidebarHeader>

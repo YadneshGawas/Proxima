@@ -68,7 +68,7 @@ export default function Landing() {
               )}
             </Button> */}
             <Button variant="ghost" onClick={() => navigate("/login")}>
-              Sign In
+              Log In
             </Button>
             <Button onClick={() => navigate("/register")}>Sign Up</Button>
           </div>
@@ -114,7 +114,7 @@ export default function Landing() {
               variant="outline"
               onClick={() => navigate("/login")}
             >
-              Sign In to Dashboard
+              Become An Organizer
             </Button>
           </div>
         </div>

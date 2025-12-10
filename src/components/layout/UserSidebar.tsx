@@ -1,5 +1,14 @@
-import { Home, Calendar, BarChart3, Mail, LogOut, Zap, Users, Coins } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  Home,
+  Calendar,
+  BarChart3,
+  Mail,
+  LogOut,
+  Zap,
+  Users,
+  Coins,
+} from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -11,18 +20,18 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   useSidebar,
-} from '@/components/ui/sidebar';
-import { NavLink } from '@/components/NavLink';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
+} from "@/components/ui/sidebar";
+import { NavLink } from "@/components/NavLink";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 
 const menuItems = [
-  { title: 'Home', url: '/dashboard', icon: Home },
-  { title: 'Hackathons', url: '/hackathons', icon: Calendar },
-  { title: 'Teams', url: '/teams', icon: Users },
-  { title: 'Credits', url: '/credits', icon: Coins },
-  { title: 'Analytics', url: '/analytics', icon: BarChart3 },
-  { title: 'Contact Us', url: '/contact', icon: Mail },
+  { title: "Home", url: "/dashboard", icon: Home },
+  { title: "Hackathons", url: "/hackathons", icon: Calendar },
+  { title: "Teams", url: "/teams", icon: Users },
+  { title: "Credits", url: "/credits", icon: Coins },
+  { title: "Analytics", url: "/analytics", icon: BarChart3 },
+  { title: "Contact Us", url: "/contact", icon: Mail },
 ];
 
 export function UserSidebar() {
@@ -30,28 +39,30 @@ export function UserSidebar() {
   const { logout, user, becomeOrganizer } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const collapsed = state === 'collapsed';
+  const collapsed = state === "collapsed";
 
   const handleLogout = async () => {
     await logout();
-    navigate('/');
+    navigate("/");
   };
 
   const handleBecomeOrganizer = async () => {
     await becomeOrganizer();
-    navigate('/admin');
+    navigate("/admin/create-event");
   };
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border p-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+      <SidebarHeader className="border-b border-sidebar-border h-16 p-4">
+        <div className="flex items-center justify-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg text-white">
             <Zap className="h-5 w-5" />
           </div>
-          {!collapsed && (
-            <span className="text-lg font-bold text-sidebar-foreground">HackHub</span>
-          )}
+          {/* {!collapsed && (
+            <span className="text-lg font-bold text-sidebar-foreground">
+              HackHub
+            </span>
+          )} */}
         </div>
       </SidebarHeader>
 
@@ -77,28 +88,30 @@ export function UserSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {user?.role === 'user' && (
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <div className={collapsed ? 'px-2' : 'px-3'}>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={handleBecomeOrganizer}
-                >
-                  {collapsed ? (
-                    <Zap className="h-4 w-4" />
-                  ) : (
-                    <>
-                      <Zap className="mr-2 h-4 w-4" />
-                      Become Organizer
-                    </>
-                  )}
-                </Button>
-              </div>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+        {/* {user?.role === 'user' && ( */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <div>
+              <Button
+                variant="outline"
+                className={`w-full ${
+                  collapsed ? "justify-center" : "justify-start"
+                }`}
+                onClick={handleBecomeOrganizer}
+              >
+                {collapsed ? (
+                  <Zap className="h-2 w-2" />
+                ) : (
+                  <>
+                    <Zap className="h-5 w-5" />
+                    Become Organizer
+                  </>
+                )}
+              </Button>
+            </div>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        {/* )} */}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">
