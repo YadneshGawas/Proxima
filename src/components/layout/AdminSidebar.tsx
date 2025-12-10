@@ -36,12 +36,14 @@ export function AdminSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border h-16 p-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg text-white">
-            <Zap className="h-5 w-5" />
-          </div>
+          <img
+            src="/logo-4.png"
+            alt="logo"
+            className="h-8 w-8 object-contain"
+          />
           {!collapsed && (
             <span className="text-lg font-bold text-sidebar-foreground">
-              HackHub
+              Proxima
             </span>
           )}
         </div>
