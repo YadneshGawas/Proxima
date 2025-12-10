@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { FolderOpen } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -166,24 +167,41 @@ export default function EventDetails() {
         </Button>
 
         {/* Event Header */}
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">{hackathon.name}</h1>
-            <p className="text-muted-foreground">
-              {hackathon.organizer} • {hackathon.location}
-            </p>
-            <div className="mt-2 flex gap-2">
-              <Badge variant={hackathon.status === 'upcoming' ? 'default' : 'secondary'}>
-                {hackathon.status}
-              </Badge>
-              <Badge variant="outline">{hackathon.mode}</Badge>
+          <div className="flex flex-wrap items-start justify-between gap-4 w-full">
+            
+            {/* LEFT: Event details */}
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">{hackathon.name}</h1>
+              <p className="text-muted-foreground">
+                {hackathon.organizer} • {hackathon.location}
+              </p>
+
+              <div className="mt-2 flex gap-2">
+                <Badge variant={hackathon.status === "upcoming" ? "default" : "secondary"}>
+                  {hackathon.status}
+                </Badge>
+                <Badge variant="outline">{hackathon.mode}</Badge>
+              </div>
             </div>
+
+            {/* RIGHT: Buttons */}
+            <div className="flex items-center gap-3">
+              <Button
+                  variant="outline"
+                  onClick={() => navigate(`/admin/${id}/submission`)}
+                >
+                  <FolderOpen className="mr-2 h-4 w-4" />
+                  View Submissions
+                </Button>
+
+              <Button onClick={handleExportPDF}>
+                <Download className="mr-2 h-4 w-4" />
+                Export Participants
+              </Button>
+            </div>
+
           </div>
-          <Button onClick={handleExportPDF}>
-            <Download className="mr-2 h-4 w-4" />
-            Export Participants
-          </Button>
-        </div>
+
 
         {/* Event Stats */}
         <div className="grid gap-4 md:grid-cols-4">
