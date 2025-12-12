@@ -1,357 +1,433 @@
-import { Hackathon, User, UserAnalytics, AdminAnalytics, Notification, HackathonRegistration, ParticipationRecord } from '@/types';
+import {
+  User,
+  Hackathon,
+  Registration,
+  GlobalTeam,
+  HackathonTeam,
+  Winner,
+  Payment,
+  Notification,
+  UserCredits,
+  UserAnalytics,
+  AdminAnalytics,
+} from "@/types";
 
-export const mockUser: User = {
-  id: '1',
-  email: 'john@example.com',
-  name: 'John Doe',
-  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
-  role: 'user',
-  createdAt: '2024-01-15',
-};
-
-export const mockOrganizerUser: User = {
-  id: '2',
-  email: 'admin@hackhub.com',
-  name: 'Admin User',
-  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin',
-  role: 'organizer',
-  createdAt: '2024-01-01',
-};
-
-export const mockHackathons: Hackathon[] = [
+// ========================================================
+// USERS
+// ========================================================
+export const mockUsers: User[] = [
   {
-    id: '1',
-    name: 'TechCrunch Disrupt Hackathon 2024',
-    description: 'Join the most prestigious hackathon in the tech industry. Build innovative solutions that could change the world.',
-    organizer: 'TechCrunch',
-    organizerId: 'org1',
-    location: 'San Francisco, CA',
-    mode: 'hybrid',
-    teamSize: { min: 2, max: 5 },
-    deadline: '2024-03-15',
-    startDate: '2024-03-20',
-    endDate: '2024-03-22',
-    postedOn: '2024-02-01',
-    tags: ['AI/ML', 'Web3', 'FinTech', 'Healthcare'],
-    entryFee: 50,
-    prizes: ['$10,000 Grand Prize', '$5,000 Runner-up', '$2,500 Third Place'],
-    requirements: ['Valid student ID or employment proof', 'Team registration required'],
-    participationType: 'team',
-    maxParticipants: 500,
-    registeredCount: 245,
-    interestedCount: 890,
-    imageUrl: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800',
-    status: 'upcoming',
+    id: "u1",
+    name: "John Doe",
+    email: "john@example.com",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=John",
+    code: "USR001",
+    createdAt: "2024-01-10T10:00:00Z",
+    credits: 200,
+    role: "user",
   },
   {
-    id: '2',
-    name: 'Google Cloud DevFest',
-    description: 'Build with Google Cloud and compete for amazing prizes. Learn from experts and network with developers worldwide.',
-    organizer: 'Google Developer Groups',
-    organizerId: 'org2',
-    location: 'Online',
-    mode: 'online',
-    teamSize: { min: 1, max: 4 },
-    deadline: '2024-04-01',
-    startDate: '2024-04-05',
-    endDate: '2024-04-07',
-    postedOn: '2024-02-15',
-    tags: ['Cloud', 'DevOps', 'AI/ML'],
-    prizes: ['$5,000 + Cloud Credits', '$3,000 + Cloud Credits'],
-    participationType: 'team',
-    registeredCount: 1200,
-    interestedCount: 3500,
-    imageUrl: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800',
-    status: 'upcoming',
+    id: "u2",
+    name: "Admin User",
+    email: "admin@example.com",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Admin",
+    code: "USR002",
+    createdAt: "2024-01-01T09:00:00Z",
+    credits: 500,
+    role: "organizer",
   },
   {
-    id: '3',
-    name: 'Sustainability Hack',
-    description: 'Create solutions for environmental challenges. Focus on sustainability, renewable energy, and climate tech.',
-    organizer: 'GreenTech Foundation',
-    organizerId: 'org3',
-    location: 'New York, NY',
-    mode: 'offline',
-    teamSize: { min: 3, max: 6 },
-    deadline: '2024-03-25',
-    startDate: '2024-04-10',
-    endDate: '2024-04-12',
-    postedOn: '2024-02-20',
-    tags: ['Sustainability', 'CleanTech', 'IoT'],
-    entryFee: 25,
-    prizes: ['$8,000 Grand Prize', 'Incubator Program Access'],
-    requirements: ['Focus on environmental impact'],
-    participationType: 'team',
-    maxParticipants: 200,
-    registeredCount: 89,
-    interestedCount: 450,
-    imageUrl: 'https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?w=800',
-    status: 'upcoming',
+    id: "u3",
+    name: "Jane Smith",
+    email: "jane@example.com",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jane",
+    code: "USR003",
+    createdAt: "2024-01-05T11:00:00Z",
+    credits: 120,
+    role: "user",
   },
   {
-    id: '4',
-    name: 'Individual Code Challenge',
-    description: 'Solo coding competition to test your algorithmic skills and problem-solving abilities.',
-    organizer: 'CodeMasters',
-    organizerId: 'org4',
-    location: 'Online',
-    mode: 'online',
-    teamSize: { min: 1, max: 1 },
-    deadline: '2024-03-10',
-    startDate: '2024-03-12',
-    endDate: '2024-03-12',
-    postedOn: '2024-02-25',
-    tags: ['Algorithms', 'Data Structures', 'Competitive Programming'],
-    prizes: ['$2,000', '$1,000', '$500'],
-    participationType: 'individual',
-    registeredCount: 567,
-    interestedCount: 1200,
-    imageUrl: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800',
-    status: 'ongoing',
-  },
-  {
-    id: '5',
-    name: 'Blockchain Innovation Summit',
-    description: 'Build the future of decentralized applications. Web3, DeFi, and NFT projects welcome.',
-    organizer: 'Ethereum Foundation',
-    organizerId: 'org5',
-    location: 'Miami, FL',
-    mode: 'hybrid',
-    teamSize: { min: 2, max: 4 },
-    deadline: '2024-05-01',
-    startDate: '2024-05-10',
-    endDate: '2024-05-12',
-    postedOn: '2024-03-01',
-    tags: ['Web3', 'DeFi', 'NFT', 'Blockchain'],
-    entryFee: 75,
-    prizes: ['$15,000 + ETH', '$7,500 + ETH', '$3,000 + ETH'],
-    participationType: 'team',
-    maxParticipants: 300,
-    registeredCount: 156,
-    interestedCount: 780,
-    imageUrl: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800',
-    status: 'upcoming',
+    id: "u4",
+    name: "Bob Wilson",
+    email: "bob@example.com",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bob",
+    code: "USR004",
+    createdAt: "2024-01-06T11:00:00Z",
+    credits: 50,
+    role: "user",
   },
 ];
 
+// ========================================================
+// HACKATHONS (8 total)
+// ========================================================
+export const mockHackathons: Hackathon[] = [
+  {
+    id: "h1",
+    organizerId: "u2",
+    eventName: "TechCrunch Disrupt 2024",
+    description: "Build world-changing solutions with top tech innovators.",
+    location: "San Francisco, CA",
+    mode: "hybrid",
+    participationType: "team",
+    minTeamSize: 2,
+    maxTeamSize: 5,
+    deadline: "2024-03-10T23:59:00Z",
+    startDate: "2024-03-20T09:00:00Z",
+    endDate: "2024-03-22T18:00:00Z",
+    entryFee: 50,
+    maxParticipants: 500,
+    createdAt: "2024-02-01T10:00:00Z",
+    registeredCount: 245,
+    interestedCount: 890,
+    status: "upcoming",
+    tags: ["AI/ML", "Cloud"],
+    imageUrl: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800",
+  },
+  {
+    id: "h2",
+    organizerId: "u2",
+    eventName: "Google Cloud DevFest",
+    description: "Compete and learn with Google Cloud experts.",
+    location: "Online",
+    mode: "online",
+    participationType: "team",
+    minTeamSize: 1,
+    maxTeamSize: 4,
+    deadline: "2024-04-01T23:59:00Z",
+    startDate: "2024-04-05T09:00:00Z",
+    endDate: "2024-04-07T18:00:00Z",
+    entryFee: 0,
+    createdAt: "2024-02-10T12:00:00Z",
+    registeredCount: 1200,
+    interestedCount: 3500,
+    status: "upcoming",
+    tags: ["Cloud", "DevOps"],
+    imageUrl: "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800",
+  },
+  {
+    id: "h3",
+    organizerId: "u3",
+    eventName: "Sustainability Hack",
+    description: "Environmental & Climate Tech solutions.",
+    location: "New York, NY",
+    mode: "offline",
+    participationType: "team",
+    minTeamSize: 3,
+    maxTeamSize: 6,
+    deadline: "2024-03-25T23:59:00Z",
+    startDate: "2024-04-10T09:00:00Z",
+    endDate: "2024-04-12T18:00:00Z",
+    entryFee: 25,
+    maxParticipants: 200,
+    createdAt: "2024-02-20T11:00:00Z",
+    registeredCount: 89,
+    interestedCount: 450,
+    status: "upcoming",
+    tags: ["CleanTech", "IoT"],
+    imageUrl: "https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?w=800",
+  },
+  {
+    id: "h4",
+    organizerId: "u4",
+    eventName: "Individual Code Challenge",
+    description: "Test your algorithmic skills.",
+    location: "Online",
+    mode: "online",
+    participationType: "individual",
+    minTeamSize: 1,
+    maxTeamSize: 1,
+    deadline: "2024-03-10T23:59:00Z",
+    startDate: "2024-03-12T09:00:00Z",
+    endDate: "2024-03-12T18:00:00Z",
+    entryFee: 0,
+    createdAt: "2024-02-25T12:00:00Z",
+    registeredCount: 567,
+    interestedCount: 1200,
+    status: "ongoing",
+    tags: ["Algorithms", "Data Structures"],
+    imageUrl: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800",
+  },
+
+  // Minimal hackathons
+  {
+    id: "h5",
+    organizerId: "u1",
+    eventName: "Blockchain Innovation Summit",
+    mode: "hybrid",
+    participationType: "team",
+    entryFee: 75,
+    createdAt: "2024-03-01T09:00:00Z",
+  },
+  {
+    id: "h6",
+    organizerId: "u2",
+    eventName: "AI Mini Sprint",
+    mode: "online",
+    participationType: "team",
+    entryFee: 0,
+    createdAt: "2024-03-03T09:00:00Z",
+  },
+  {
+    id: "h7",
+    organizerId: "u1",
+    eventName: "Cybersecurity CTF",
+    mode: "offline",
+    participationType: "individual",
+    entryFee: 10,
+    createdAt: "2024-03-04T10:00:00Z",
+  },
+  {
+    id: "h8",
+    organizerId: "u3",
+    eventName: "Robotics Weekend Jam",
+    mode: "hybrid",
+    participationType: "team",
+    entryFee: 20,
+    createdAt: "2024-03-05T10:00:00Z",
+  },
+];
+
+// ========================================================
+// GLOBAL TEAMS
+// ========================================================
+export const mockTeams: GlobalTeam[] = [
+  {
+    id: "t1",
+    name: "CodeCrafters",
+    description: "A passionate engineering team.",
+    ownerId: "u1",
+    teamCode: "CC2024",
+    isPublic: true,
+    createdAt: "2024-01-15T10:00:00Z",
+    members: [
+      {
+        id: "gtm1",
+        teamId: "t1",
+        userId: "u1",
+        role: "leader",
+        joinedAt: "2024-01-15T10:00:00Z",
+      },
+      {
+        id: "gtm2",
+        teamId: "t1",
+        userId: "u3",
+        role: "backend",
+        joinedAt: "2024-01-20T10:00:00Z",
+      },
+      {
+        id: "gtm3",
+        teamId: "t1",
+        userId: "u4",
+        role: "frontend",
+        joinedAt: "2024-01-20T10:30:00Z",
+      },
+    ],
+  },
+];
+
+// ========================================================
+// HACKATHON TEAMS
+// ========================================================
+export const mockHackathonTeams: HackathonTeam[] = [
+  {
+    id: "ht1",
+    hackathonId: "h1",
+    name: "CodeCrafters-H1",
+    createdById: "u1",
+    createdAt: "2024-02-12T10:00:00Z",
+    members: [
+      {
+        id: "htm1",
+        hackathonTeamId: "ht1",
+        userId: "u1",
+        joinedAt: "2024-02-12T10:00:00Z",
+      },
+      {
+        id: "htm2",
+        hackathonTeamId: "ht1",
+        userId: "u3",
+        joinedAt: "2024-02-12T10:05:00Z",
+      },
+    ],
+  },
+];
+
+// ========================================================
+// REGISTRATIONS
+// ========================================================
+export const mockRegistrations: Registration[] = [
+  {
+    id: "reg1",
+    hackathonId: "h1",
+    globalTeamId: "t1",
+    registeredAt: "2024-02-15T10:30:00Z",
+    status: 1,
+  },
+  {
+    id: "reg2",
+    hackathonId: "h4",
+    userId: "u1",
+    registeredAt: "2024-02-18T14:00:00Z",
+    status: 0,
+  },
+  {
+    id: "reg3",
+    hackathonId: "h1",
+    hackathonTeamId: "ht1",
+    registeredAt: "2024-02-16T09:00:00Z",
+    status: 1,
+  },
+];
+
+// ========================================================
+// PAYMENTS
+// ========================================================
+export const mockPayments: Payment[] = [
+  {
+    id: "pay1",
+    userId: "u1",
+    hackathonId: "h1",
+    amount: 50,
+    currency: "USD",
+    status: "completed",
+    createdAt: "2024-02-15T10:31:00Z",
+  },
+];
+
+// ========================================================
+// WINNERS
+// ========================================================
+export const mockWinners: Winner[] = [
+  {
+    id: "win1",
+    hackathonId: "h1",
+    hackathonTeamId: "ht1",
+    position: 1,
+    projectTitle: "AI Health Scanner",
+    projectDesc: "Automated diagnosis from X-rays using CNN.",
+    gitUrl: "https://github.com/codecrafters/healthscan",
+    liveUrl: "https://healthscan.live",
+    createdAt: "2024-03-01T10:00:00Z",
+  },
+];
+
+// ========================================================
+// USER CREDITS
+// ========================================================
+export const mockUserCredits: UserCredits = {
+  balance: 250,
+  transactions: [
+    {
+      id: "tx1",
+      type: "deposit",
+      amount: 100,
+      description: "Initial deposit",
+      createdAt: "2024-01-12T10:00:00Z",
+    },
+    {
+      id: "tx2",
+      type: "deduction",
+      amount: 50,
+      description: "TechCrunch registration",
+      createdAt: "2024-02-15T10:00:00Z",
+    },
+  ],
+};
+
+// ========================================================
+// NOTIFICATIONS
+// ========================================================
+export const mockNotifications: Notification[] = [
+  {
+    id: "n1",
+    title: "Hackathon Near You!",
+    message: "TechCrunch Disrupt is only 5 miles away.",
+    type: "nearby",
+    hackathonId: "h1",
+    distance: 5,
+    read: false,
+    createdAt: "2024-03-01T10:00:00Z",
+  },
+];
+
+// ========================================================
+// ANALYTICS
+// ========================================================
 export const mockUserAnalytics: UserAnalytics = {
-  totalRegistered: 12,
-  wins: 3,
-  runnerUp: 4,
-  losses: 5,
+  totalRegistered: 5,
+  wins: 1,
+  runnerUp: 1,
+  losses: 3,
   participationHistory: [
-    { hackathonId: '1', hackathonName: 'TechCrunch 2023', date: '2023-09-15', result: 'win', position: 1, teamName: 'CodeCrafters' },
-    { hackathonId: '2', hackathonName: 'Google DevFest 2023', date: '2023-10-20', result: 'runner-up', position: 2, teamName: 'ByteBuilders' },
-    { hackathonId: '3', hackathonName: 'MLH Local Hack Day', date: '2023-11-05', result: 'loss', teamName: 'DataDynamos' },
-    { hackathonId: '4', hackathonName: 'HackMIT', date: '2023-11-18', result: 'win', position: 1, teamName: 'CodeCrafters' },
-    { hackathonId: '5', hackathonName: 'PennApps', date: '2023-12-02', result: 'runner-up', position: 3, teamName: 'InnovatorsUnited' },
+    {
+      hackathonId: "h1",
+      hackathonName: "TechCrunch Disrupt",
+      date: "2023-09-15",
+      result: "win",
+      position: 1,
+      teamId: "t1",
+    },
   ],
 };
 
 export const mockAdminAnalytics: AdminAnalytics = {
   totalHackathons: 8,
-  averageTeamsPerHackathon: 156,
-  totalParticipants: 2450,
+  averageTeamsPerHackathon: 30,
+  totalParticipants: 2500,
   totalBookingAmount: 125000,
   hackathonStats: [
-    { hackathonId: '1', hackathonName: 'TechCrunch Disrupt 2024', registeredTeams: 245, totalParticipants: 890, bookingAmount: 24500 },
-    { hackathonId: '2', hackathonName: 'Cloud DevFest', registeredTeams: 320, totalParticipants: 1200, bookingAmount: 32000 },
-    { hackathonId: '3', hackathonName: 'Sustainability Hack', registeredTeams: 89, totalParticipants: 360, bookingAmount: 8900 },
+    {
+      hackathonId: "h1",
+      hackathonName: "TechCrunch Disrupt",
+      registeredTeams: 245,
+      totalParticipants: 890,
+      bookingAmount: 24500,
+    },
   ],
 };
 
-export const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    title: 'Hackathon Near You!',
-    message: 'TechCrunch Disrupt is happening 5 miles away from your location.',
-    type: 'nearby',
-    hackathonId: '1',
-    distance: 5,
-    read: false,
-    createdAt: '2024-03-01T10:00:00Z',
-  },
-  {
-    id: '2',
-    title: 'Registration Deadline',
-    message: 'Only 3 days left to register for Google Cloud DevFest!',
-    type: 'deadline',
-    hackathonId: '2',
-    read: false,
-    createdAt: '2024-03-28T09:00:00Z',
-  },
-  {
-    id: '3',
-    title: 'New Hackathon Added',
-    message: 'Blockchain Innovation Summit has been added. Check it out!',
-    type: 'update',
-    hackathonId: '5',
-    read: true,
-    createdAt: '2024-03-01T14:30:00Z',
-  },
-  {
-    id: '4',
-    title: 'Nearby Event Alert',
-    message: 'Sustainability Hack is happening 12 miles from you in New York.',
-    type: 'nearby',
-    hackathonId: '3',
-    distance: 12,
-    read: false,
-    createdAt: '2024-02-28T16:00:00Z',
-  },
+// ========================================================
+// AVAILABLE TAGS (used in CreateEvent and filters)
+// ========================================================
+export const availableTags: string[] = [
+  "AI/ML",
+  "Cloud",
+  "IoT",
+  "Blockchain",
+  "Cybersecurity",
+  "Web",
+  "Mobile",
+  "AR/VR",
+  "Robotics",
+  "DevOps",
+  "Data Science",
 ];
 
-export const mockRegistrations: HackathonRegistration[] = [
-  {
-    id: 'reg1',
-    hackathonId: '1',
-    userId: '1',
-    teamName: 'CodeCrafters',
-    teamMembers: [
-      { name: 'John Doe', email: 'john@example.com', role: 'Team Lead' },
-      { name: 'Jane Smith', email: 'jane@example.com', role: 'Backend Developer' },
-      { name: 'Bob Wilson', email: 'bob@example.com', role: 'Frontend Developer' },
-    ],
-    contactEmail: 'john@example.com',
-    contactPhone: '+1-555-0123',
-    status: 'approved',
-    registeredAt: '2024-02-15T10:30:00Z',
-  },
-  {
-    id: 'reg2',
-    hackathonId: '1',
-    userId: '3',
-    teamName: 'ByteBuilders',
-    teamMembers: [
-      { name: 'Alice Brown', email: 'alice@example.com', role: 'Team Lead' },
-      { name: 'Charlie Davis', email: 'charlie@example.com', role: 'Full Stack' },
-    ],
-    contactEmail: 'alice@example.com',
-    contactPhone: '+1-555-0456',
-    status: 'pending',
-    registeredAt: '2024-02-18T14:00:00Z',
-  },
-];
-
-export const availableTags = [
-  'AI/ML', 'Web3', 'FinTech', 'Healthcare', 'Cloud', 'DevOps',
-  'Sustainability', 'CleanTech', 'IoT', 'Blockchain', 'DeFi', 'NFT',
-  'Algorithms', 'Data Structures', 'Mobile', 'AR/VR', 'Gaming', 'EdTech',
-];
-
-// Mock Teams Data
-export const mockTeams: import('@/types').Team[] = [
-  {
-    id: 'team1',
-    name: 'CodeCrafters',
-    code: 'CC2024',
-    description: 'A passionate team of full-stack developers focused on building innovative solutions.',
-    ownerId: '1',
-    ownerName: 'John Doe',
-    members: [
-      { id: '1', name: 'John Doe', email: 'john@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John', role: 'Team Lead', joinedAt: '2024-01-15' },
-      { id: '3', name: 'Jane Smith', email: 'jane@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jane', role: 'Backend Developer', joinedAt: '2024-01-20' },
-      { id: '4', name: 'Bob Wilson', email: 'bob@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob', role: 'Frontend Developer', joinedAt: '2024-01-25' },
-    ],
-    isPublic: true,
-    createdAt: '2024-01-15',
-  },
-  {
-    id: 'team2',
-    name: 'ByteBuilders',
-    code: 'BB2024',
-    description: 'Building the future one byte at a time. Specializing in cloud and DevOps.',
-    ownerId: '5',
-    ownerName: 'Alice Brown',
-    members: [
-      { id: '5', name: 'Alice Brown', email: 'alice@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice', role: 'Team Lead', joinedAt: '2024-02-01' },
-      { id: '6', name: 'Charlie Davis', email: 'charlie@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie', role: 'Full Stack', joinedAt: '2024-02-05' },
-    ],
-    isPublic: true,
-    createdAt: '2024-02-01',
-  },
-  {
-    id: 'team3',
-    name: 'DataDynamos',
-    code: 'DD2024',
-    description: 'Data science and ML enthusiasts tackling complex problems with AI.',
-    ownerId: '7',
-    ownerName: 'Eva Martinez',
-    members: [
-      { id: '7', name: 'Eva Martinez', email: 'eva@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Eva', role: 'Team Lead', joinedAt: '2024-02-10' },
-      { id: '8', name: 'Frank Lee', email: 'frank@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Frank', role: 'ML Engineer', joinedAt: '2024-02-15' },
-      { id: '9', name: 'Grace Kim', email: 'grace@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Grace', role: 'Data Analyst', joinedAt: '2024-02-20' },
-      { id: '10', name: 'Henry Wang', email: 'henry@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Henry', role: 'Backend Developer', joinedAt: '2024-02-25' },
-    ],
-    isPublic: true,
-    createdAt: '2024-02-10',
-  },
-  {
-    id: 'team4',
-    name: 'InnovatorsUnited',
-    code: 'IU2024',
-    description: 'A diverse team bringing fresh perspectives to hackathon challenges.',
-    ownerId: '11',
-    ownerName: 'Ivy Chen',
-    members: [
-      { id: '11', name: 'Ivy Chen', email: 'ivy@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ivy', role: 'Team Lead', joinedAt: '2024-03-01' },
-      { id: '12', name: 'Jack Thompson', email: 'jack@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jack', role: 'Designer', joinedAt: '2024-03-05' },
-    ],
-    isPublic: false,
-    createdAt: '2024-03-01',
-  },
-];
-
-// Mock User Credits
-export const mockUserCredits: import('@/types').UserCredits = {
-  balance: 250,
-  transactions: [
-    { id: 'tx1', type: 'deposit', amount: 100, description: 'Initial deposit', createdAt: '2024-01-15T10:00:00Z' },
-    { id: 'tx2', type: 'deduction', amount: 50, description: 'TechCrunch Hackathon registration', createdAt: '2024-02-01T14:30:00Z' },
-    { id: 'tx3', type: 'deposit', amount: 200, description: 'Credit pack purchase', createdAt: '2024-02-15T09:00:00Z' },
-    { id: 'tx4', type: 'refund', amount: 25, description: 'Sustainability Hack cancellation refund', createdAt: '2024-02-20T16:00:00Z' },
-    { id: 'tx5', type: 'deduction', amount: 25, description: 'Individual Code Challenge registration', createdAt: '2024-03-01T11:00:00Z' },
-  ],
-};
-
-
-// hackthon winners data
+// ========================================================
+// SUBMISSIONS (REQUIRED FOR SUBMISSION LIST PAGE)
+// ========================================================
 export const mockSubmissions = [
   {
-    id: "proj1",
-    hackathonId: "1",
-    teamId: "reg1",
+    id: "sub1",
+    hackathonId: "h1",
+    registrationId: "reg1",
     projectTitle: "AI Health Scanner",
-    projectDesc: "A tool that predicts diseases from X-rays using CNN.",
+    projectDesc: "ML-based diagnosis tool.",
     githubUrl: "https://github.com/codecrafters/healthscan",
     liveUrl: "https://healthscan.live",
-    score: 95
-
+    score: 92,
+    createdAt: "2024-03-01T10:00:00Z",
   },
   {
-    id: "proj2",
-    hackathonId: "1",
-    teamId: "reg2",
-    projectTitle: "EcoRoute Planner",
-    projectDesc: "A real-time green route planner using pollution datasets.",
-    githubUrl: "https://github.com/bytebuilders/ecoroute",
-    liveUrl: "https://ecoroute.io",
-    score: 81
-  }
-];
-
-
-export const mockWinners = [
-  {
-    id: "win1",
-    projectId: "proj1",
-    position: 1
+    id: "sub2",
+    hackathonId: "h1",
+    registrationId: "reg3",
+    projectTitle: "Team H1 - Robotics Vision",
+    projectDesc: "Robot detection pipeline.",
+    githubUrl: "https://github.com/demo/robotics",
+    liveUrl: "",
+    score: null,
+    createdAt: "2024-03-01T12:00:00Z",
   },
-  {
-    id: "win2",
-    projectId: "proj2",
-    position: 2
-  }
 ];
-
-

@@ -1,82 +1,89 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Github, ExternalLink, Trophy } from "lucide-react";
+import { ArrowLeft, Github, ExternalLink } from "lucide-react";
 
-import { mockRegistrations, mockSubmissions, mockWinners } from "@/data/mockData";
+import {
+  mockRegistrations,
+  mockSubmissions,
+  mockTeams,
+  mockHackathonTeams,
+  mockUsers,
+} from "@/data/mockData";
 
 export default function ReviewSubmissionPage() {
-  const { id, teamId } = useParams();
+  const { submissionId } = useParams();
   const navigate = useNavigate();
 
-  const team = mockRegistrations.find(t => t.id === teamId);
-  const submission = mockSubmissions.find(s => s.teamId === teamId);
+  // Get submission
+  const submission = mockSubmissions.find((s) => s.id === submissionId) || null;
 
-  const [score, setScore] = useState(submission?.score || 0);
+  // Get registration
+  const registration = submission
+    ? mockRegistrations.find((r) => r.id === submission.registrationId) || null
+    : null;
+
+  // HOOKS MUST COME BEFORE ANY CONDITIONAL RETURN
+  const [score, setScore] = useState(submission?.score ?? 0);
   const [isSaving, setIsSaving] = useState(false);
-  const [position, setPosition] = useState(() => {
-    const w = mockWinners.find(w => w.projectId === submission?.id);
-    return w?.position || 0;
-  });
 
-  // Sync with mock data (simulate real-time updates)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const latest = mockSubmissions.find(s => s.teamId === teamId);
-      if (latest && latest.score !== score) {
-        setScore(latest.score);
-      }
-    }, 1200);
-
-    return () => clearInterval(interval);
-  }, [score, teamId]);
-
-  const saveScore = () => {
-    if (!submission) return;
-
-    setIsSaving(true);
-    setTimeout(() => {
-      submission.score = Number(score);
-      setIsSaving(false);
-      alert("Score updated (mock).");
-    }, 500);
-  };
-
-  const assignWinner = (p) => {
-    if (!submission) return;
-
-    // remove existing winner entry for this project
-    const existingIndex = mockWinners.findIndex(w => w.projectId === submission.id);
-    if (existingIndex !== -1) {
-      mockWinners.splice(existingIndex, 1);
-    }
-
-    // add new entry
-    mockWinners.push({
-      id: crypto.randomUUID(),
-      projectId: submission.id,
-      position: p,
-    });
-
-    setPosition(p);
-
-    alert(`Winner position set → Rank ${p}`);
-  };
-
-  if (!team || !submission) {
+  // If invalid, return AFTER hooks
+  if (!submission || !registration) {
     return (
       <AdminLayout>
         <Button variant="ghost" onClick={() => navigate(-1)}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Back
         </Button>
-        <p className="mt-4 text-muted-foreground">Team or submission not found.</p>
+        <p className="mt-4 text-muted-foreground">Submission not found.</p>
       </AdminLayout>
     );
   }
+
+  // Resolve team name & members
+  let teamName = "Unknown Team";
+  let memberList: string[] = [];
+
+  if (registration.globalTeamId) {
+    const team = mockTeams.find((t) => t.id === registration.globalTeamId);
+    teamName = team?.name ?? "Team";
+    memberList =
+      team?.members?.map((m) => {
+        const user = mockUsers.find((u) => u.id === m.userId);
+        return `${user?.name} — ${m.role}`;
+      }) ?? [];
+  }
+
+  if (registration.hackathonTeamId) {
+    const ht = mockHackathonTeams.find(
+      (t) => t.id === registration.hackathonTeamId
+    );
+    teamName = ht?.name ?? "Hackathon Team";
+    memberList =
+      ht?.members?.map((m) => {
+        const user = mockUsers.find((u) => u.id === m.userId);
+        return user?.name ?? "Unknown";
+      }) ?? [];
+  }
+
+  if (registration.userId) {
+    const user = mockUsers.find((u) => u.id === registration.userId);
+    teamName = user?.name ?? "Individual";
+    memberList = [teamName];
+  }
+
+  const saveScore = () => {
+    submission.score = Number(score);
+    setIsSaving(true);
+
+    setTimeout(() => {
+      setIsSaving(false);
+      alert("Score updated (mock).");
+    }, 400);
+  };
 
   return (
     <AdminLayout>
@@ -89,80 +96,60 @@ export default function ReviewSubmissionPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">{team.teamName}</CardTitle>
+            <CardTitle className="text-2xl">{teamName}</CardTitle>
           </CardHeader>
 
           <CardContent className="space-y-6">
-            {/* Project Details */}
+            {/* Project */}
             <div>
-              <h2 className="text-xl font-semibold">{submission.projectTitle}</h2>
+              <h2 className="text-xl font-semibold">
+                {submission.projectTitle}
+              </h2>
               <p className="text-muted-foreground">{submission.projectDesc}</p>
             </div>
 
             {/* Links */}
             <div className="flex gap-4">
-              <Button variant="outline" onClick={() => window.open(submission.githubUrl)}>
-                <Github className="mr-2 h-4 w-4" /> GitHub
-              </Button>
-
-              <Button onClick={() => window.open(submission.liveUrl)}>
-                <ExternalLink className="mr-2 h-4 w-4" /> Live Demo
-              </Button>
+              {submission.githubUrl && (
+                <Button
+                  variant="outline"
+                  onClick={() => window.open(submission.githubUrl)}
+                >
+                  <Github className="mr-2 h-4 w-4" /> GitHub
+                </Button>
+              )}
+              {submission.liveUrl && (
+                <Button onClick={() => window.open(submission.liveUrl)}>
+                  <ExternalLink className="mr-2 h-4 w-4" /> Live Demo
+                </Button>
+              )}
             </div>
 
-            {/* Team Members */}
+            {/* Members */}
             <div>
               <h3 className="font-medium mb-2">Team Members</h3>
               <ul className="list-disc ml-6 space-y-1 text-sm">
-                {team.teamMembers.map((m) => (
-                  <li key={m.email}>
-                    {m.name} — {m.role}
-                  </li>
+                {memberList.map((m, i) => (
+                  <li key={i}>{m}</li>
                 ))}
               </ul>
             </div>
 
-            {/* Score Input */}
+            {/* Score */}
             <div className="space-y-2">
               <label className="font-medium">Judge Score (0–100)</label>
               <Input
                 type="number"
                 min={0}
                 max={100}
-                className="w-32"
                 value={score}
+                className="w-32"
                 onChange={(e) => setScore(Number(e.target.value))}
               />
-              <Button onClick={saveScore} disabled={isSaving}>
+              <Button disabled={isSaving} onClick={saveScore}>
                 {isSaving ? "Saving..." : "Save Score"}
               </Button>
             </div>
-
-            {/* Winner Assignment */}
-            {/* <div className="space-y-2">
-              <h3 className="font-medium mb-1">Assign Winner</h3>
-
-              <select
-                className="border rounded p-2 bg-background"
-                value={position}
-                onChange={(e) => assignWinner(Number(e.target.value))}
-              >
-                <option value={0}>No Rank</option>
-                <option value={1}>🥇 Rank 1</option>
-                <option value={2}>🥈 Rank 2</option>
-                <option value={3}>🥉 Rank 3</option>
-              </select>
-            </div> */}
-
-            {/* Edit Submission Page */}
-            {/* <Button
-              variant="outline"
-              onClick={() =>
-                navigate(`/admin/${id}/submission/${teamId}/edit`)
-              }
-            >
-              Edit Submission
-            </Button> */}
           </CardContent>
         </Card>
       </div>

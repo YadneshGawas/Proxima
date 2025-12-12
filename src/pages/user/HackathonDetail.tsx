@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -12,15 +13,17 @@ import {
   Share2,
   Building2,
 } from "lucide-react";
+
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { RegistrationModal } from "@/components/RegistrationModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+
 import { useToast } from "@/hooks/use-toast";
-import { Hackathon } from "@/types";
-import { hackathonService } from "@/services/api";
+import { Hackathon, Registration } from "@/types";
+import { hackathonService, registrationService } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function HackathonDetail() {
@@ -28,30 +31,34 @@ export default function HackathonDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+
   const [hackathon, setHackathon] = useState<Hackathon | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
-  const [btnState, setBtnState] = useState(4);
+  const [btnState, setBtnState] = useState<number>(4);
 
+  // Registration button states
   const RegState = {
     NOT_REGISTERED: 0,
     PENDING: 1,
     REJECTED: 2,
     REGISTERED: 3,
     VIEW_WINNERS: 4,
-  };
+  } as const;
 
+  // -------------------------
+  // Load hackathon on mount
+  // -------------------------
   useEffect(() => {
-    if (id) {
-      loadHackathon();
-    }
+    if (id) loadHackathon();
   }, [id]);
 
   const loadHackathon = async () => {
-    if (!id) return;
+    setIsLoading(true);
     try {
-      const data = await hackathonService.getById(id);
+      const data = await hackathonService.getById(id!);
       setHackathon(data);
     } catch (error) {
       toast({
@@ -65,11 +72,62 @@ export default function HackathonDetail() {
     }
   };
 
+  // Trigger registration state computation
+  useEffect(() => {
+    if (hackathon && user) computeRegistrationState();
+    else if (hackathon && !user)
+      setBtnState(
+        isHackathonOver(hackathon)
+          ? RegState.VIEW_WINNERS
+          : RegState.NOT_REGISTERED
+      );
+  }, [hackathon, user]);
+
+  // -------------------------
+  // Registration State Logic
+  // -------------------------
+  const computeRegistrationState = async () => {
+    if (!hackathon || !user) return;
+
+    if (isHackathonOver(hackathon)) {
+      setBtnState(RegState.VIEW_WINNERS);
+      return;
+    }
+
+    try {
+      const regs = await registrationService.getByUser(user.id);
+      const reg = regs.find(
+        (r: Registration) => r.hackathonId === hackathon.id
+      );
+
+      if (!reg) {
+        setBtnState(RegState.NOT_REGISTERED);
+        return;
+      }
+
+      if (reg.status === 0) setBtnState(RegState.PENDING);
+      else if (reg.status === 1) setBtnState(RegState.REGISTERED);
+      else if (reg.status === 2) setBtnState(RegState.REJECTED);
+    } catch {
+      setBtnState(RegState.NOT_REGISTERED);
+    }
+  };
+
+  const isHackathonOver = (h: Hackathon) => {
+    if (!h.endDate) return false;
+    return Date.now() > new Date(h.endDate).getTime();
+  };
+
+  // -------------------------
+  // Interest Marking
+  // -------------------------
   const handleMarkInterested = async () => {
     if (!hackathon || !user) return;
+
     try {
       await hackathonService.markInterested(hackathon.id, user.id);
       setIsInterested(!isInterested);
+
       toast({
         title: isInterested
           ? "Removed from interested"
@@ -78,7 +136,7 @@ export default function HackathonDetail() {
           ? "You will no longer receive updates."
           : "You will receive updates about this hackathon.",
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to update interest status.",
@@ -87,7 +145,8 @@ export default function HackathonDetail() {
     }
   };
 
-  const formatDate = (date: string) => {
+  const formatDate = (date?: string) => {
+    if (!date) return "Not specified";
     return new Date(date).toLocaleDateString("en-US", {
       weekday: "long",
       month: "long",
@@ -96,6 +155,9 @@ export default function HackathonDetail() {
     });
   };
 
+  // -------------------------
+  // LOADING UI
+  // -------------------------
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -107,6 +169,9 @@ export default function HackathonDetail() {
     );
   }
 
+  // -------------------------
+  // NULL UI
+  // -------------------------
   if (!hackathon) {
     return (
       <DashboardLayout>
@@ -120,6 +185,9 @@ export default function HackathonDetail() {
     );
   }
 
+  // -------------------------
+  // MAIN UI
+  // -------------------------
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -135,15 +203,16 @@ export default function HackathonDetail() {
             <div className="h-64 overflow-hidden rounded-lg">
               <img
                 src={hackathon.imageUrl}
-                alt={hackathon.name}
+                alt={hackathon.eventName}
                 className="h-full w-full object-cover"
               />
             </div>
           )}
-          <div className="mt-4">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
+
+          <div className="mt-4 flex flex-wrap justify-between items-start gap-4">
+            <div>
+              <div className="flex gap-2 mb-2">
+                {hackathon.status && (
                   <Badge
                     variant={
                       hackathon.status === "upcoming" ? "default" : "secondary"
@@ -151,47 +220,52 @@ export default function HackathonDetail() {
                   >
                     {hackathon.status}
                   </Badge>
-                  <Badge variant="outline">{hackathon.mode}</Badge>
-                </div>
-                <h1 className="text-3xl font-bold text-foreground">
-                  {hackathon.name}
-                </h1>
-                <p className="mt-1 flex items-center gap-2 text-muted-foreground">
-                  <Building2 className="h-4 w-4" />
-                  Organized by {hackathon.organizer}
-                </p>
+                )}
+                <Badge variant="outline">{hackathon.mode}</Badge>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  variant={isInterested ? "secondary" : "outline"}
-                  onClick={handleMarkInterested}
-                >
-                  <Heart
-                    className={`mr-2 h-4 w-4 ${
-                      isInterested ? "fill-current" : ""
-                    }`}
-                  />
-                  {isInterested ? "Interested" : "Mark Interested"}
-                </Button>
-                <Button variant="outline" size="icon">
-                  <Share2 className="h-4 w-4" />
-                </Button>
-              </div>
+
+              <h1 className="text-3xl font-bold">{hackathon.eventName}</h1>
+
+              <p className="mt-1 flex items-center gap-2 text-muted-foreground">
+                <Building2 className="h-4 w-4" />
+                Organizer ID: {hackathon.organizerId}
+              </p>
+            </div>
+
+            {/* Interest + Share */}
+            <div className="flex gap-2">
+              <Button
+                variant={isInterested ? "secondary" : "outline"}
+                onClick={handleMarkInterested}
+              >
+                <Heart
+                  className={`mr-2 h-4 w-4 ${
+                    isInterested ? "fill-current" : ""
+                  }`}
+                />
+                {isInterested ? "Interested" : "Mark Interested"}
+              </Button>
+
+              <Button variant="outline" size="icon">
+                <Share2 className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
 
         {/* Tags */}
-        <div className="flex flex-wrap gap-2">
-          {hackathon.tags.map((tag) => (
-            <Badge key={tag} variant="outline">
-              {tag}
-            </Badge>
-          ))}
-        </div>
+        {hackathon.tags && (
+          <div className="flex flex-wrap gap-2">
+            {hackathon.tags.map((tag) => (
+              <Badge key={tag} variant="outline">
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Main Content */}
+          {/* MAIN CONTENT */}
           <div className="lg:col-span-2 space-y-6">
             {/* Description */}
             <Card>
@@ -199,20 +273,20 @@ export default function HackathonDetail() {
                 <CardTitle>About</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-foreground">{hackathon.description}</p>
+                <p>{hackathon.description}</p>
               </CardContent>
             </Card>
 
             {/* Requirements */}
-            {hackathon.requirements && hackathon.requirements.length > 0 && (
+            {hackathon.requirements && (
               <Card>
                 <CardHeader>
                   <CardTitle>Requirements</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="list-disc list-inside space-y-1 text-foreground">
-                    {hackathon.requirements.map((req, index) => (
-                      <li key={index}>{req}</li>
+                  <ul className="list-disc list-inside space-y-1">
+                    {hackathon.requirements.map((req, i) => (
+                      <li key={i}>{req}</li>
                     ))}
                   </ul>
                 </CardContent>
@@ -220,7 +294,7 @@ export default function HackathonDetail() {
             )}
 
             {/* Prizes */}
-            {hackathon.prizes && hackathon.prizes.length > 0 && (
+            {hackathon.prizes && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -229,94 +303,96 @@ export default function HackathonDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-2">
-                    {hackathon.prizes.map((prize, index) => (
-                      <li
-                        key={index}
-                        className="flex items-center gap-2 text-foreground"
-                      >
-                        <Badge variant={index === 0 ? "default" : "secondary"}>
-                          {index === 0
-                            ? "1st"
-                            : index === 1
-                            ? "2nd"
-                            : `${index + 1}th`}
-                        </Badge>
-                        {prize}
-                      </li>
-                    ))}
-                  </ul>
+                  {hackathon.prizes.map((p, i) => (
+                    <div key={i} className="flex gap-2 items-center">
+                      <Badge variant={i === 0 ? "default" : "secondary"}>
+                        {i === 0 ? "1st" : i === 1 ? "2nd" : `${i + 1}th`}
+                      </Badge>
+                      {p}
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             )}
           </div>
 
-          {/* Sidebar */}
+          {/* SIDEBAR */}
           <div className="space-y-6">
-            {/* Quick Info */}
             <Card>
               <CardHeader>
                 <CardTitle>Event Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-start gap-3">
+                {/* Dates */}
+                <div className="flex gap-3">
                   <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div>
                     <p className="text-sm text-muted-foreground">Event Dates</p>
-                    <p className="font-medium text-foreground">
-                      {formatDate(hackathon.startDate)} -{" "}
+                    <p className="font-medium">
+                      {formatDate(hackathon.startDate)} —{" "}
                       {formatDate(hackathon.endDate)}
                     </p>
                   </div>
                 </div>
+
                 <Separator />
-                <div className="flex items-start gap-3">
+
+                {/* Deadline */}
+                <div className="flex gap-3">
                   <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div>
                     <p className="text-sm text-muted-foreground">
                       Registration Deadline
                     </p>
-                    <p className="font-medium text-foreground">
+                    <p className="font-medium">
                       {formatDate(hackathon.deadline)}
                     </p>
                   </div>
                 </div>
+
                 <Separator />
-                <div className="flex items-start gap-3">
+
+                {/* Location */}
+                <div className="flex gap-3">
                   <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div>
                     <p className="text-sm text-muted-foreground">Location</p>
-                    <p className="font-medium text-foreground">
-                      {hackathon.location}
+                    <p className="font-medium">
+                      {hackathon.location ?? "Online"}
                     </p>
                   </div>
                 </div>
+
                 <Separator />
-                <div className="flex items-start gap-3">
+
+                {/* Participation */}
+                <div className="flex gap-3">
                   <Users className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div>
                     <p className="text-sm text-muted-foreground">
                       Participation
                     </p>
-                    <p className="font-medium text-foreground capitalize">
+                    <p className="font-medium capitalize">
                       {hackathon.participationType}
                       {hackathon.participationType === "team" &&
-                        ` (${hackathon.teamSize.min}-${hackathon.teamSize.max} members)`}
+                        ` (${hackathon.minTeamSize ?? "?"}-${
+                          hackathon.maxTeamSize ?? "?"
+                        })`}
                     </p>
                   </div>
                 </div>
-                {hackathon.entryFee && (
+
+                {/* Entry Fee */}
+                {hackathon.entryFee > 0 && (
                   <>
                     <Separator />
-                    <div className="flex items-start gap-3">
+                    <div className="flex gap-3">
                       <DollarSign className="h-5 w-5 text-muted-foreground mt-0.5" />
                       <div>
                         <p className="text-sm text-muted-foreground">
                           Entry Fee
                         </p>
-                        <p className="font-medium text-foreground">
-                          ${hackathon.entryFee}
-                        </p>
+                        <p className="font-medium">${hackathon.entryFee}</p>
                       </div>
                     </div>
                   </>
@@ -324,57 +400,64 @@ export default function HackathonDetail() {
               </CardContent>
             </Card>
 
-            {/* Registration Stats */}
+            {/* Stats */}
             <Card>
-              <CardContent className="pt-6">
-                <div className="grid grid-cols-2 gap-4 text-center">
-                  <div>
-                    <p className="text-2xl font-bold text-foreground">
-                      {hackathon.registeredCount}
-                    </p>
-                    <p className="text-sm text-muted-foreground">Registered</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-foreground">
-                      {hackathon.interestedCount}
-                    </p>
-                    <p className="text-sm text-muted-foreground">Interested</p>
-                  </div>
+              <CardContent className="pt-6 grid grid-cols-2 text-center gap-4">
+                <div>
+                  <p className="text-2xl font-bold">
+                    {hackathon.registeredCount ?? 0}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Registered</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">
+                    {hackathon.interestedCount ?? 0}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Interested</p>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Register Button */}
-            {/* New logic must be implemented that shows whether yet to register, pending from organizer and rejected */}
-            {/* After hackathon is over the button must show view winners */}
-            {btnState === 4 && (
+            {/* BUTTON STATES */}
+            {btnState === RegState.VIEW_WINNERS && (
               <Button
                 className="w-full"
-                size="lg"
                 variant="outline"
-                onClick={() => navigate(`/hackathons/${hackathon.id}/HackathonWinners`)}
+                size="lg"
+                onClick={() =>
+                  navigate(`/hackathons/${hackathon.id}/HackathonWinners`)
+                }
               >
                 View Winners
               </Button>
             )}
 
-            {btnState === 0 && (
+            {btnState === RegState.NOT_REGISTERED && (
               <Button
                 className="w-full"
                 size="lg"
-                onClick={() => setIsRegistrationOpen(true)}
+                onClick={() => {
+                  if (!user) {
+                    toast({
+                      title: "Login Required",
+                      description: "Please log in to register",
+                    });
+                    return;
+                  }
+                  setIsRegistrationOpen(true);
+                }}
               >
                 Register Now
               </Button>
             )}
 
-            {btnState === 1 && (
+            {btnState === RegState.PENDING && (
               <Button className="w-full" size="lg" disabled variant="secondary">
                 Pending Approval
               </Button>
             )}
 
-            {btnState === 2 && (
+            {btnState === RegState.REJECTED && (
               <Button
                 className="w-full"
                 size="lg"
@@ -385,7 +468,7 @@ export default function HackathonDetail() {
               </Button>
             )}
 
-            {btnState === 3 && (
+            {btnState === RegState.REGISTERED && (
               <Button className="w-full" size="lg" disabled variant="default">
                 Registered
               </Button>
@@ -394,10 +477,11 @@ export default function HackathonDetail() {
         </div>
       </div>
 
+      {/* Registration Modal */}
       <RegistrationModal
-        hackathon={hackathon}
         open={isRegistrationOpen}
         onOpenChange={setIsRegistrationOpen}
+        hackathon={hackathon}
       />
     </DashboardLayout>
   );
