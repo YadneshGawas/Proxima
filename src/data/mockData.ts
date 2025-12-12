@@ -313,3 +313,45 @@ export const mockUserCredits: import('@/types').UserCredits = {
     { id: 'tx5', type: 'deduction', amount: 25, description: 'Individual Code Challenge registration', createdAt: '2024-03-01T11:00:00Z' },
   ],
 };
+
+
+// hackthon winners data
+export const mockSubmissions = [
+  {
+    id: "proj1",
+    hackathonId: "1",
+    teamId: "reg1",
+    projectTitle: "AI Health Scanner",
+    projectDesc: "A tool that predicts diseases from X-rays using CNN.",
+    githubUrl: "https://github.com/codecrafters/healthscan",
+    liveUrl: "https://healthscan.live",
+    score: 95
+
+  },
+  {
+    id: "proj2",
+    hackathonId: "1",
+    teamId: "reg2",
+    projectTitle: "EcoRoute Planner",
+    projectDesc: "A real-time green route planner using pollution datasets.",
+    githubUrl: "https://github.com/bytebuilders/ecoroute",
+    liveUrl: "https://ecoroute.io",
+    score: 81
+  }
+];
+
+
+export const mockWinners = [
+  {
+    id: "win1",
+    projectId: "proj1",
+    position: 1
+  },
+  {
+    id: "win2",
+    projectId: "proj2",
+    position: 2
+  }
+];
+
+

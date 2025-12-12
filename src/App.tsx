@@ -13,6 +13,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/user/Dashboard";
 import Hackathons from "./pages/user/Hackathons";
 import HackathonDetail from "./pages/user/HackathonDetail";
+import HackathonWinners from "./pages/user/HackathonWinners";
 import Analytics from "./pages/user/Analytics";
 import Contact from "./pages/user/Contact";
 import Teams from "./pages/user/Teams";
@@ -22,6 +23,9 @@ import CreateEvent from "./pages/admin/CreateEvent";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import EventDetails from "./pages/admin/EventDetails";
 import NotFound from "./pages/NotFound";
+import ProjectSubmission from "./pages/admin/ProjectSubmission";
+import ReviewSubmissionPage from "./pages/admin/ReviewSubmissionPage";
+
 
 const queryClient = new QueryClient();
 
@@ -48,11 +52,15 @@ const App = () => (
               <Route path="/credits" element={<Credits />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/hackathons/:id/HackathonWinners" element={<HackathonWinners />} />
+              
               
               {/* Admin Routes */}
               <Route path="/admin/create-event" element={<CreateEvent />} />
               <Route path="/admin/analytics" element={<AdminAnalytics />} />
               <Route path="/admin/events/:id" element={<EventDetails />} />
+              <Route path="/admin/:id/submission" element={<ProjectSubmission />} />
+              <Route path="/admin/:id/submission/:teamId" element={<ReviewSubmissionPage />} />
               
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />

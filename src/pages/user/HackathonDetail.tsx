@@ -32,7 +32,7 @@ export default function HackathonDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
-  const [btnState, setBtnState] = useState(2);
+  const [btnState, setBtnState] = useState(4);
 
   const RegState = {
     NOT_REGISTERED: 0,
@@ -352,7 +352,7 @@ export default function HackathonDetail() {
                 className="w-full"
                 size="lg"
                 variant="outline"
-                onClick={() => navigate(`/hackathons/${hackathon.id}/winners`)}
+                onClick={() => navigate(`/hackathons/${hackathon.id}/HackathonWinners`)}
               >
                 View Winners
               </Button>
