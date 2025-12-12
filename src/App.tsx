@@ -25,7 +25,7 @@ import EventDetails from "./pages/admin/EventDetails";
 import NotFound from "./pages/NotFound";
 import ProjectSubmission from "./pages/admin/ProjectSubmission";
 import ReviewSubmissionPage from "./pages/admin/ReviewSubmissionPage";
-
+import ProjectExplorer from "./pages/user/ProjectExplorer"
 
 const queryClient = new QueryClient();
 
@@ -53,6 +53,8 @@ const App = () => (
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/hackathons/:id/HackathonWinners" element={<HackathonWinners />} />
+              <Route path="/projects" element={<ProjectExplorer />} />
+
               
               
               {/* Admin Routes */}

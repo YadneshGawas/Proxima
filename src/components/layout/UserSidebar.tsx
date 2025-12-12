@@ -24,6 +24,7 @@ import {
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Rocket } from "lucide-react";
 
 const menuItems = [
   { title: "Home", url: "/dashboard", icon: Home },
@@ -32,6 +33,7 @@ const menuItems = [
   { title: "Credits", url: "/credits", icon: Coins },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Contact Us", url: "/contact", icon: Mail },
+  { title: "Project Explorer", url: "/projects", icon: Rocket },
 ];
 
 export function UserSidebar() {
