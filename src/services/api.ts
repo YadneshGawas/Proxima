@@ -1,361 +1,486 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// src/services/api.ts
 /**
- * API Service Layer
- * 
- * This file contains all API calls to connect with your Flask/MySQL backend.
- * Replace the BASE_URL with your Flask server URL and update the endpoints accordingly.
- * 
- * Mock implementations are provided for development - replace with actual fetch calls.
+ * API Service Layer — UPDATED for new mock DB and dynamic analytics
+ *
+ * - Uses your frontend types from '@/types'
+ * - Uses DB-shaped mock data from '@/data/mockData'
+ * - analyticsService.getUserAnalytics(userId) computes analytics from mock data (no hard-coded analytics)
+ *
+ * NOTE: Replace mock implementations with real apiCall(...) functions when wiring to your backend.
  */
 
-import { 
-  User, 
-  Hackathon, 
-  HackathonRegistration, 
-  UserAnalytics, 
-  AdminAnalytics, 
+import {
+  User,
+  Hackathon,
+  Registration,
+  UserAnalytics,
+  AdminAnalytics,
   Notification,
-  HackathonFilters 
-} from '@/types';
-import { 
-  mockUser, 
-  mockOrganizerUser,
-  mockHackathons, 
-  mockUserAnalytics, 
-  mockAdminAnalytics, 
+  HackathonFilters,
+  GlobalTeam,
+  GlobalTeamMember,
+  HackathonTeam,
+  HackathonTeamMember,
+  Winner,
+  Payment,
+  UserCredits,
+} from "@/types";
+
+import {
+  mockUsers,
+  mockHackathons,
+  mockTeams,
+  mockRegistrations,
+  mockHackathonTeams,
+  mockWinners,
   mockNotifications,
-  mockRegistrations 
-} from '@/data/mockData';
+} from "@/data/mockData";
 
-// TODO: Replace with your Flask backend URL
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Base URL for future real API
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-// Helper function for API calls
-async function apiCall<T>(
-  endpoint: string, 
-  options?: RequestInit
-): Promise<T> {
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  });
-  
-  if (!response.ok) {
-    throw new Error(`API Error: ${response.statusText}`);
-  }
-  
-  return response.json();
+/* helper: simulate latency in mocks */
+const delay = (ms = 300) => new Promise((res) => setTimeout(res, ms));
+
+/* =========
+   Helper utilities over mock data
+   ========= */
+
+function findUserById(userId: string): User | undefined {
+  return mockUsers.find((u) => u.id === userId);
 }
 
-// ============ AUTH SERVICES ============
+function findHackathonById(hId: string): Hackathon | undefined {
+  return mockHackathons.find((h) => h.id === hId);
+}
 
+function getGlobalTeamMembers(teamId: string): GlobalTeamMember[] {
+  const team = mockTeams.find((t) => t.id === teamId);
+  return team?.members || [];
+}
+
+function getHackathonTeamMembers(hTeamId: string): HackathonTeamMember[] {
+  const ht = mockHackathonTeams.find((t) => t.id === hTeamId);
+  return ht?.members || [];
+}
+
+/**
+ * Return registrations where user participates:
+ * - individual registration where registration.userId === userId
+ * - registrations by globalTeam where the team contains the user
+ * - registrations by hackathonTeam where the hackathonTeam contains the user
+ */
+function getRegistrationsForUser(userId: string): Registration[] {
+  // direct individual registrations
+  const individual = mockRegistrations.filter((r) => r.userId === userId);
+
+  // global team registrations where user is member
+  const teamRegistrations = mockRegistrations.filter((r) => {
+    if (!r.globalTeamId) return false;
+    const members = getGlobalTeamMembers(r.globalTeamId);
+    return members.some((m) => m.userId === userId);
+  });
+
+  // hackathon team registrations where user is member
+  const hteamRegistrations = mockRegistrations.filter((r) => {
+    if (!r.hackathonTeamId) return false;
+    const members = getHackathonTeamMembers(r.hackathonTeamId);
+    return members.some((m) => m.userId === userId);
+  });
+
+  // Merge and dedupe by registration id (just in case)
+  const combined = [...individual, ...teamRegistrations, ...hteamRegistrations];
+  const deduped: { [id: string]: Registration } = {};
+  combined.forEach((r) => (deduped[r.id] = r));
+  return Object.values(deduped);
+}
+
+/**
+ * For a given user and hackathonId, determine the result:
+ * - Find if any hackathonTeam that the user belongs to has a Winner entry for that hackathon.
+ * - If not, check if any hackathonTeam for that hackathon was registered and user part of it -> treated as participated (loss or pending)
+ *
+ * Returns:
+ *  { result: 'win' | 'runner-up' | 'second-runner-up' | 'loss' | 'pending', position?: number, winnerEntry?: Winner }
+ */
+function computeUserResultForHackathon(userId: string, hackathonId: string): { result: string; position?: number; winner?: Winner | undefined } {
+  // 1. Check hackathon teams that user belongs to
+  const userHTeamIds = mockHackathonTeams
+    .filter((ht) => ht.hackathonId === hackathonId)
+    .filter((ht) => (ht.members || []).some((m) => m.userId === userId))
+    .map((ht) => ht.id);
+
+  // 2. See if any winner corresponds to these hteam ids
+  for (const w of mockWinners.filter((w) => w.hackathonId === hackathonId)) {
+    if (userHTeamIds.includes(w.hackathonTeamId)) {
+      // map position to result label
+      if (w.position === 1) return { result: "win", position: 1, winner: w };
+      if (w.position === 2) return { result: "runner-up", position: 2, winner: w };
+      if (w.position === 3) return { result: "second-runner-up", position: 3, winner: w };
+    }
+  }
+
+  // 3. If user was registered (via global team / hackathon team / individual) for this hackathon -> mark as loss/participated
+  const reg = mockRegistrations.find((r) => {
+    if (r.hackathonId !== hackathonId) return false;
+    // individual registration by user:
+    if (r.userId === userId) return true;
+    // global team registration that includes user
+    if (r.globalTeamId) {
+      const members = getGlobalTeamMembers(r.globalTeamId);
+      if (members.some((m) => m.userId === userId)) return true;
+    }
+    // hackathon team registration that includes user
+    if (r.hackathonTeamId) {
+      const members = getHackathonTeamMembers(r.hackathonTeamId);
+      if (members.some((m) => m.userId === userId)) return true;
+    }
+    return false;
+  });
+
+  if (reg) {
+    // If registration status is pending (status === 0), mark pending
+    if (reg.status === 0) return { result: "pending" };
+    // else mark as loss/participated
+    return { result: "loss" };
+  }
+
+  // If user not registered, return pending (or not participated)
+  return { result: "pending" };
+}
+
+/* =========
+   Mock API / Services (public API preserved)
+   ========= */
+
+/* AUTH SERVICE */
 export const authService = {
-  // Login with email/password
   login: async (email: string, password: string): Promise<{ user: User; token: string }> => {
-    // TODO: Replace with actual API call
-    // return apiCall('/auth/login', {
-    //   method: 'POST',
-    //   body: JSON.stringify({ email, password }),
-    // });
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const isOrganizer = email.includes('admin') || email.includes('organizer');
-    return { 
-      user: isOrganizer ? mockOrganizerUser : mockUser, 
-      token: 'mock-jwt-token' 
-    };
+    // mock: return first matching user by email or demo user u1
+    await delay(400);
+    const found = mockUsers.find((u) => u.email === email) || mockUsers[0];
+    return { user: found, token: "mock-jwt-token" };
   },
 
-  // Register new user
   register: async (name: string, email: string, password: string): Promise<{ user: User; token: string }> => {
-    // TODO: Replace with actual API call
-    // return apiCall('/auth/register', {
-    //   method: 'POST',
-    //   body: JSON.stringify({ name, email, password }),
-    // });
-    
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { 
-      user: { ...mockUser, name, email }, 
-      token: 'mock-jwt-token' 
+    await delay(500);
+    // simplistic: return a new user object (not mutating mockUsers file)
+    const newUser: User = {
+      id: String(Date.now()),
+      name,
+      email,
+      avatar: "",
+      code: `USR${String(Math.floor(Math.random() * 9000) + 1000)}`,
+      createdAt: new Date().toISOString(),
+      credits: 0,
+      role: "user",
     };
+    return { user: newUser, token: "mock-jwt-token" };
   },
 
-  // Google OAuth
-  loginWithGoogle: async (token: string): Promise<{ user: User; token: string }> => {
-    // TODO: Replace with actual API call
-    // return apiCall('/auth/google', {
-    //   method: 'POST',
-    //   body: JSON.stringify({ token }),
-    // });
-    
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { user: mockUser, token: 'mock-jwt-token' };
+  loginWithGoogle: async (token: string) => {
+    await delay(300);
+    return { user: mockUsers[0], token: "mock-jwt-token" };
   },
 
-  // Facebook OAuth
-  loginWithFacebook: async (token: string): Promise<{ user: User; token: string }> => {
-    // TODO: Replace with actual API call
-    // return apiCall('/auth/facebook', {
-    //   method: 'POST',
-    //   body: JSON.stringify({ token }),
-    // });
-    
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { user: mockUser, token: 'mock-jwt-token' };
+  loginWithFacebook: async (token: string) => {
+    await delay(300);
+    return { user: mockUsers[0], token: "mock-jwt-token" };
   },
 
-  // Logout
-  logout: async (): Promise<void> => {
-    // TODO: Replace with actual API call
-    // return apiCall('/auth/logout', { method: 'POST' });
-    
-    await new Promise(resolve => setTimeout(resolve, 200));
+  logout: async () => {
+    await delay(150);
   },
 
-  // Get current user
-  getCurrentUser: async (): Promise<User> => {
-    // TODO: Replace with actual API call
-    // return apiCall('/auth/me');
-    
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockUser;
+  getCurrentUser: async () => {
+    await delay(200);
+    // For demo, return first user (id="u1")
+    return mockUsers[0];
   },
 
-  // Convert user to organizer
-  becomeOrganizer: async (userId: string): Promise<User> => {
-    // TODO: Replace with actual API call
-    // return apiCall(`/users/${userId}/become-organizer`, { method: 'POST' });
-    
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { ...mockUser, role: 'organizer' };
+  becomeOrganizer: async (userId: string) => {
+    await delay(250);
+    const u = findUserById(userId);
+    if (!u) throw new Error("User not found");
+    // Return a shallow copy with role changed (do not mutate original mock data)
+    return { ...u, role: "organizer" } as User;
   },
 };
 
-// ============ HACKATHON SERVICES ============
-
+/* HACKATHON SERVICE */
 export const hackathonService = {
-  // Get all hackathons with optional filters
   getAll: async (filters?: HackathonFilters): Promise<Hackathon[]> => {
-    // TODO: Replace with actual API call
-    // const params = new URLSearchParams(filters as any).toString();
-    // return apiCall(`/hackathons?${params}`);
-    
-    await new Promise(resolve => setTimeout(resolve, 400));
+    await delay(300);
     let filtered = [...mockHackathons];
-    
-    if (filters?.mode) {
-      filtered = filtered.filter(h => h.mode === filters.mode);
+
+    if (!filters) return filtered;
+
+    if (filters.mode) filtered = filtered.filter((h) => h.mode === filters.mode);
+    if (filters.participationType) filtered = filtered.filter((h) => h.participationType === filters.participationType);
+    if (filters.tags && filters.tags.length) {
+      filtered = filtered.filter((h) => Array.isArray(h.tags) && h.tags.some((t) => filters.tags!.includes(t)));
     }
-    if (filters?.participationType) {
-      filtered = filtered.filter(h => h.participationType === filters.participationType);
+    if (filters.organizer) filtered = filtered.filter((h) => h.organizerId === filters.organizer);
+
+    if (filters.dateRange?.start) {
+      const start = new Date(filters.dateRange.start);
+      filtered = filtered.filter((h) => (h.startDate ? new Date(h.startDate) >= start : true));
     }
-    if (filters?.tags?.length) {
-      filtered = filtered.filter(h => 
-        h.tags.some(tag => filters.tags?.includes(tag))
-      );
+    if (filters.dateRange?.end) {
+      const end = new Date(filters.dateRange.end);
+      filtered = filtered.filter((h) => (h.endDate ? new Date(h.endDate) <= end : true));
     }
-    
+
     return filtered;
   },
 
-  // Get hackathon by ID
   getById: async (id: string): Promise<Hackathon> => {
-    // TODO: Replace with actual API call
-    // return apiCall(`/hackathons/${id}`);
-    
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const hackathon = mockHackathons.find(h => h.id === id);
-    if (!hackathon) throw new Error('Hackathon not found');
-    return hackathon;
+    await delay(250);
+    const found = mockHackathons.find((h) => h.id === id);
+    if (!found) throw new Error("Hackathon not found");
+    return found;
   },
 
-  // Get nearby hackathons based on location
-  getNearby: async (lat: number, lng: number, radius: number = 50): Promise<Hackathon[]> => {
-    // TODO: Replace with actual API call
-    // return apiCall(`/hackathons/nearby?lat=${lat}&lng=${lng}&radius=${radius}`);
-    
-    await new Promise(resolve => setTimeout(resolve, 400));
-    return mockHackathons.filter(h => h.mode === 'offline' || h.mode === 'hybrid');
+  getNearby: async (_lat: number, _lng: number, _radius: number = 50): Promise<Hackathon[]> => {
+    await delay(250);
+    return mockHackathons.filter((h) => h.mode === "offline" || h.mode === "hybrid");
   },
 
-  // Create new hackathon (Admin)
-  create: async (hackathon: Omit<Hackathon, 'id' | 'registeredCount' | 'interestedCount' | 'status'>): Promise<Hackathon> => {
-    // TODO: Replace with actual API call
-    // return apiCall('/hackathons', {
-    //   method: 'POST',
-    //   body: JSON.stringify(hackathon),
-    // });
-    
-    await new Promise(resolve => setTimeout(resolve, 500));
+  create: async (hackathon: Omit<Hackathon, "id" | "registeredCount" | "interestedCount" | "status">): Promise<Hackathon> => {
+    await delay(300);
     return {
       ...hackathon,
       id: String(Date.now()),
       registeredCount: 0,
       interestedCount: 0,
-      status: 'upcoming',
-    };
+      status: "upcoming",
+    } as Hackathon;
   },
 
-  // Update hackathon (Admin)
-  update: async (id: string, hackathon: Partial<Hackathon>): Promise<Hackathon> => {
-    // TODO: Replace with actual API call
-    // return apiCall(`/hackathons/${id}`, {
-    //   method: 'PUT',
-    //   body: JSON.stringify(hackathon),
-    // });
-    
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const existing = mockHackathons.find(h => h.id === id);
-    if (!existing) throw new Error('Hackathon not found');
-    return { ...existing, ...hackathon };
+  update: async (id: string, data: Partial<Hackathon>): Promise<Hackathon> => {
+    await delay(300);
+    const existing = mockHackathons.find((h) => h.id === id);
+    if (!existing) throw new Error("Hackathon not found");
+    return { ...existing, ...data };
   },
 
-  // Delete hackathon (Admin)
   delete: async (id: string): Promise<void> => {
-    // TODO: Replace with actual API call
-    // return apiCall(`/hackathons/${id}`, { method: 'DELETE' });
-    
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await delay(200);
   },
 
-  // Mark hackathon as interested
   markInterested: async (hackathonId: string, userId: string): Promise<void> => {
-    // TODO: Replace with actual API call
-    // return apiCall(`/hackathons/${hackathonId}/interested`, { method: 'POST' });
-    
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await delay(150);
+    // mock: nothing to persist
   },
 };
 
-// ============ REGISTRATION SERVICES ============
-
+/* REGISTRATION SERVICE */
 export const registrationService = {
-  // Register for hackathon
-  register: async (registration: Omit<HackathonRegistration, 'id' | 'status' | 'registeredAt'>): Promise<HackathonRegistration> => {
-    // TODO: Replace with actual API call
-    // return apiCall('/registrations', {
-    //   method: 'POST',
-    //   body: JSON.stringify(registration),
-    // });
-    
-    await new Promise(resolve => setTimeout(resolve, 500));
+  /**
+   * register: Accepts a Registration-like payload but without id/status/registeredAt
+   * For frontend compatibility we accept:
+   *  {
+   *    hackathonId,
+   *    userId? (individual),
+   *    globalTeamId? (global team),
+   *    hackathonTeamId? (hackathon team)
+   *  }
+   */
+  register: async (payload: Omit<Registration, "id" | "registeredAt" | "status">): Promise<Registration> => {
+    await delay(350);
+    // NOTE: This mock does not validate duplicates/unique constraints strictly.
     return {
-      ...registration,
+      ...payload,
       id: String(Date.now()),
-      status: 'pending',
+      status: 0,
       registeredAt: new Date().toISOString(),
-    };
+    } as Registration;
   },
 
-  // Get registrations for a hackathon (Admin)
-  getByHackathon: async (hackathonId: string): Promise<HackathonRegistration[]> => {
-    // TODO: Replace with actual API call
-    // return apiCall(`/hackathons/${hackathonId}/registrations`);
-    
-    await new Promise(resolve => setTimeout(resolve, 400));
-    return mockRegistrations.filter(r => r.hackathonId === hackathonId);
+  getByHackathon: async (hackathonId: string): Promise<Registration[]> => {
+    await delay(300);
+    return mockRegistrations.filter((r) => r.hackathonId === hackathonId);
   },
 
-  // Get user's registrations
-  getByUser: async (userId: string): Promise<HackathonRegistration[]> => {
-    // TODO: Replace with actual API call
-    // return apiCall(`/users/${userId}/registrations`);
-    
-    await new Promise(resolve => setTimeout(resolve, 400));
-    return mockRegistrations.filter(r => r.userId === userId);
+  getByUser: async (userId: string): Promise<Registration[]> => {
+    await delay(300);
+    return mockRegistrations.filter((r) => {
+      if (r.userId === userId) return true;
+      if (r.globalTeamId) {
+        const members = getGlobalTeamMembers(r.globalTeamId);
+        if (members.some((m) => m.userId === userId)) return true;
+      }
+      if (r.hackathonTeamId) {
+        const members = getHackathonTeamMembers(r.hackathonTeamId);
+        if (members.some((m) => m.userId === userId)) return true;
+      }
+      return false;
+    });
   },
 
-  // Update registration status (Admin)
-  updateStatus: async (registrationId: string, status: 'approved' | 'rejected'): Promise<HackathonRegistration> => {
-    // TODO: Replace with actual API call
-    // return apiCall(`/registrations/${registrationId}`, {
-    //   method: 'PATCH',
-    //   body: JSON.stringify({ status }),
-    // });
-    
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const reg = mockRegistrations.find(r => r.id === registrationId);
-    if (!reg) throw new Error('Registration not found');
+  updateStatus: async (registrationId: string, status: 1 | 2): Promise<Registration> => {
+    await delay(250);
+    const reg = mockRegistrations.find((r) => r.id === registrationId);
+    if (!reg) throw new Error("Registration not found");
+    // return copy with updated status
     return { ...reg, status };
   },
 
-  // Delete registration (Admin)
   delete: async (registrationId: string): Promise<void> => {
-    // TODO: Replace with actual API call
-    // return apiCall(`/registrations/${registrationId}`, { method: 'DELETE' });
-    
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await delay(200);
   },
 };
 
-// ============ ANALYTICS SERVICES ============
-
+/* ANALYTICS SERVICE (DYNAMIC: computed from mock DB) */
 export const analyticsService = {
-  // Get user analytics
   getUserAnalytics: async (userId: string, filters?: HackathonFilters): Promise<UserAnalytics> => {
-    // TODO: Replace with actual API call
-    // const params = new URLSearchParams(filters as any).toString();
-    // return apiCall(`/users/${userId}/analytics?${params}`);
-    
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockUserAnalytics;
+    await delay(300);
+
+    // 1. Gather registrations relevant to user (individual / via teams / via hackathon teams)
+    const regs = getRegistrationsForUser(userId);
+
+    // Optionally apply hackathon filters to registration set (if filters provided)
+    const filteredRegs = regs.filter((r) => {
+      if (!filters) return true;
+      const h = r.hackathonId ? findHackathonById(r.hackathonId) : undefined;
+      if (!h) return true;
+      if (filters.mode && h.mode !== filters.mode) return false;
+      if (filters.participationType && h.participationType !== filters.participationType) return false;
+      if (filters.tags && filters.tags.length) {
+        if (!h.tags || !h.tags.some((t) => filters.tags!.includes(t))) return false;
+      }
+      if (filters.dateRange?.start) {
+        const start = new Date(filters.dateRange.start);
+        if (h.startDate && new Date(h.startDate) < start) return false;
+      }
+      if (filters.dateRange?.end) {
+        const end = new Date(filters.dateRange.end);
+        if (h.endDate && new Date(h.endDate) > end) return false;
+      }
+      return true;
+    });
+
+    // 2. For each registration, build ParticipationRecord
+    const participationHistory = filteredRegs.map((r) => {
+      const hack = findHackathonById(r.hackathonId);
+      const hackName = hack ? hack.eventName : "Unknown Hackathon";
+      const date = hack?.startDate || r.registeredAt || new Date().toISOString();
+
+      // Determine result using computeUserResultForHackathon
+      const { result, position } = computeUserResultForHackathon(userId, r.hackathonId);
+
+      return {
+        hackathonId: r.hackathonId,
+        hackathonName: hackName,
+        date,
+        result: (result as any) as "win" | "runner-up" | "second-runner-up" | "pending" | "loss",
+        position,
+        teamName: (() => {
+          // We don't have teamName on registration; pick team's code if available for display
+          if (r.globalTeamId) {
+            const t = mockTeams.find((tt) => tt.id === r.globalTeamId);
+            return t?.name;
+          }
+          if (r.hackathonTeamId) {
+            const ht = mockHackathonTeams.find((x) => x.id === r.hackathonTeamId);
+            return ht?.name;
+          }
+          return undefined;
+        })(),
+      };
+    });
+
+    // 3. Aggregate totals
+    const totalRegistered = participationHistory.length;
+    let wins = 0;
+    let runnerUp = 0;
+    let losses = 0;
+
+    for (const p of participationHistory) {
+      if (p.result === "win") wins++;
+      else if (p.result === "runner-up") runnerUp++;
+      else if (p.result === "second-runner-up" || p.result === "loss") losses++;
+    }
+
+    // If user has zero registrations, participationHistory may be empty - still return shape
+    const analytics: UserAnalytics = {
+      totalRegistered,
+      wins,
+      runnerUp,
+      losses,
+      participationHistory,
+    };
+
+    return analytics;
   },
 
-  // Get admin analytics
   getAdminAnalytics: async (organizerId: string): Promise<AdminAnalytics> => {
-    // TODO: Replace with actual API call
-    // return apiCall(`/organizers/${organizerId}/analytics`);
-    
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockAdminAnalytics;
+    await delay(350);
+    // Simple aggregation over mockHackathons organized by organizerId
+    const organizes = mockHackathons.filter((h) => h.organizerId === organizerId);
+    const totalHackathons = mockHackathons.length;
+    const totalParticipants = mockRegistrations.length; // rough
+    const hackathonStats = organizes.map((h) => {
+      const regs = mockRegistrations.filter((r) => r.hackathonId === h.id);
+      // count unique teams (globalTeamId or hackathonTeamId) roughly
+      const registeredTeams = regs.filter((r) => r.globalTeamId || r.hackathonTeamId).length;
+      const bookingAmount = regs.reduce((s, r) => {
+        // try to get hackathon entryFee
+        const entry = h.entryFee || 0;
+        // if registration is individual, count entry
+        if (r.userId && entry > 0) return s + entry;
+        // if globalTeam or hackathonTeam, assume one payment per team: add entry once per team (approx)
+        if ((r.globalTeamId || r.hackathonTeamId) && entry > 0) return s + entry;
+        return s;
+      }, 0);
+      return {
+        hackathonId: h.id,
+        hackathonName: h.eventName,
+        registeredTeams,
+        totalParticipants: regs.length,
+        bookingAmount,
+      };
+    });
+
+    const adminAnalytics: AdminAnalytics = {
+      totalHackathons,
+      averageTeamsPerHackathon: Math.round(hackathonStats.reduce((s, x) => s + x.registeredTeams, 0) / Math.max(1, hackathonStats.length)),
+      totalParticipants,
+      totalBookingAmount: hackathonStats.reduce((s, x) => s + x.bookingAmount, 0),
+      hackathonStats,
+    };
+
+    return adminAnalytics;
   },
 };
 
-// ============ NOTIFICATION SERVICES ============
-
+/* NOTIFICATION SERVICE */
 export const notificationService = {
-  // Get user notifications
   getAll: async (userId: string): Promise<Notification[]> => {
-    // TODO: Replace with actual API call
-    // return apiCall(`/users/${userId}/notifications`);
-    
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockNotifications;
+    await delay(200);
+    // For demo: return all notifications that reference hackathons the user is registered for OR global mockNotifications
+    const userRegs = getRegistrationsForUser(userId).map((r) => r.hackathonId);
+    return mockNotifications.filter((n) => !n.hackathonId || userRegs.includes(n.hackathonId));
   },
 
-  // Mark notification as read
   markAsRead: async (notificationId: string): Promise<void> => {
-    // TODO: Replace with actual API call
-    // return apiCall(`/notifications/${notificationId}/read`, { method: 'POST' });
-    
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await delay(150);
   },
 
-  // Mark all as read
   markAllAsRead: async (userId: string): Promise<void> => {
-    // TODO: Replace with actual API call
-    // return apiCall(`/users/${userId}/notifications/read-all`, { method: 'POST' });
-    
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await delay(150);
   },
 };
 
-// ============ LOCATION SERVICES ============
-
+/* LOCATION SERVICE (unchanged) */
 export const locationService = {
-  // Get current location
   getCurrentLocation: (): Promise<{ lat: number; lng: number }> => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
-        reject(new Error('Geolocation is not supported'));
+        reject(new Error("Geolocation is not supported"));
         return;
       }
-      
       navigator.geolocation.getCurrentPosition(
         (position) => {
           resolve({
@@ -369,4 +494,15 @@ export const locationService = {
       );
     });
   },
+};
+
+/* Export mock data accessors (optional, helpful for tests) */
+export const __mock = {
+  users: mockUsers,
+  hackathons: mockHackathons,
+  teams: mockTeams,
+  registrations: mockRegistrations,
+  hackathonTeams: mockHackathonTeams,
+  winners: mockWinners,
+  notifications: mockNotifications,
 };

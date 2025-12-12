@@ -1,19 +1,29 @@
-import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Eye } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { AdminLayout } from '@/components/layout/AdminLayout';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect } from "react";
+import { Plus, Pencil, Trash2, Eye } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+import { AdminLayout } from "@/components/layout/AdminLayout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
+
 import {
   Dialog,
   DialogContent,
@@ -21,50 +31,57 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-import { Hackathon } from '@/types';
-import { hackathonService } from '@/services/api';
-import { availableTags, mockHackathons } from '@/data/mockData';
+} from "@/components/ui/dialog";
 
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+
+import { Hackathon } from "@/types";
+import { hackathonService } from "@/services/api";
+import { availableTags, mockHackathons, mockUsers } from "@/data/mockData";
+
+// -------------------------------------------------------
+// FORM MODEL (aligned with Hackathon type)
+// -------------------------------------------------------
 interface HackathonForm {
-  name: string;
+  eventName: string;
   description: string;
-  organizer: string;
+  organizerId: string;
   location: string;
-  mode: 'online' | 'offline' | 'hybrid';
-  teamSizeMin: number;
-  teamSizeMax: number;
+  mode: "online" | "offline" | "hybrid";
+  participationType: "individual" | "team";
+  minTeamSize: number;
+  maxTeamSize: number;
   deadline: string;
   startDate: string;
   endDate: string;
   tags: string[];
   entryFee: number;
-  participationType: 'individual' | 'team';
   maxParticipants: number;
 }
 
 const initialForm: HackathonForm = {
-  name: '',
-  description: '',
-  organizer: '',
-  location: '',
-  mode: 'online',
-  teamSizeMin: 1,
-  teamSizeMax: 5,
-  deadline: '',
-  startDate: '',
-  endDate: '',
+  eventName: "",
+  description: "",
+  organizerId: "u2",
+  location: "",
+  mode: "online",
+  participationType: "team",
+  minTeamSize: 1,
+  maxTeamSize: 5,
+  deadline: "",
+  startDate: "",
+  endDate: "",
   tags: [],
   entryFee: 0,
-  participationType: 'team',
   maxParticipants: 100,
 };
 
+// -------------------------------------------------------
 export default function CreateEvent() {
   const navigate = useNavigate();
   const { toast } = useToast();
+
   const [events, setEvents] = useState<Hackathon[]>([]);
   const [form, setForm] = useState<HackathonForm>(initialForm);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -73,40 +90,50 @@ export default function CreateEvent() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load existing events
     setEvents(mockHackathons);
   }, []);
 
+  // -------------------------------------------------------
+  // SUBMIT HANDLER — FIXED PAYLOAD
+  // -------------------------------------------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      const hackathonData = {
-        name: form.name,
-        description: form.description,
-        organizer: form.organizer,
-        organizerId: 'org1',
-        location: form.location,
+      const payload: Omit<
+        Hackathon,
+        "id" | "registeredCount" | "interestedCount" | "status"
+      > = {
+        eventName: form.eventName,
+        description: form.description || "",
+        organizerId: form.organizerId,
+        location: form.location || "",
         mode: form.mode,
-        teamSize: { min: form.teamSizeMin, max: form.teamSizeMax },
+        participationType: form.participationType,
+        minTeamSize: form.minTeamSize,
+        maxTeamSize: form.maxTeamSize,
         deadline: form.deadline,
         startDate: form.startDate,
         endDate: form.endDate,
-        postedOn: new Date().toISOString().split('T')[0],
         tags: form.tags,
-        entryFee: form.entryFee || undefined,
-        participationType: form.participationType,
+        entryFee: form.entryFee,
         maxParticipants: form.maxParticipants,
+        createdAt: new Date().toISOString(),
       };
 
       if (editingId) {
-        await hackathonService.update(editingId, hackathonData);
-        toast({ title: 'Event updated successfully!' });
+        await hackathonService.update(editingId, payload);
+        toast({ title: "Event updated successfully" });
+
+        setEvents((prev) =>
+          prev.map((ev) => (ev.id === editingId ? { ...ev, ...payload } : ev))
+        );
       } else {
-        const newEvent = await hackathonService.create(hackathonData);
-        setEvents([newEvent, ...events]);
-        toast({ title: 'Event created successfully!' });
+        const newEvent = await hackathonService.create(payload);
+        toast({ title: "Event created successfully" });
+
+        setEvents((prev) => [newEvent, ...prev]);
       }
 
       setForm(initialForm);
@@ -114,46 +141,51 @@ export default function CreateEvent() {
       setIsDialogOpen(false);
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to save event. Please try again.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to save event.",
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleEdit = (hackathon: Hackathon) => {
+  // -------------------------------------------------------
+  // EDIT HANDLER FIXED FOR NEW TYPE
+  // -------------------------------------------------------
+  const handleEdit = (hack: Hackathon) => {
     setForm({
-      name: hackathon.name,
-      description: hackathon.description,
-      organizer: hackathon.organizer,
-      location: hackathon.location,
-      mode: hackathon.mode,
-      teamSizeMin: hackathon.teamSize.min,
-      teamSizeMax: hackathon.teamSize.max,
-      deadline: hackathon.deadline,
-      startDate: hackathon.startDate,
-      endDate: hackathon.endDate,
-      tags: hackathon.tags,
-      entryFee: hackathon.entryFee || 0,
-      participationType: hackathon.participationType,
-      maxParticipants: hackathon.maxParticipants || 100,
+      eventName: hack.eventName,
+      description: hack.description ?? "",
+      organizerId: hack.organizerId,
+      location: hack.location ?? "",
+      mode: hack.mode,
+      participationType: hack.participationType,
+      minTeamSize: hack.minTeamSize ?? 1,
+      maxTeamSize: hack.maxTeamSize ?? 5,
+      deadline: hack.deadline ?? "",
+      startDate: hack.startDate ?? "",
+      endDate: hack.endDate ?? "",
+      tags: hack.tags ?? [],
+      entryFee: hack.entryFee ?? 0,
+      maxParticipants: hack.maxParticipants ?? 100,
     });
-    setEditingId(hackathon.id);
+
+    setEditingId(hack.id);
     setIsDialogOpen(true);
   };
 
+  // -------------------------------------------------------
   const handleDelete = async (id: string) => {
     try {
       await hackathonService.delete(id);
-      setEvents(events.filter((e) => e.id !== id));
-      toast({ title: 'Event deleted successfully!' });
+      setEvents((prev) => prev.filter((e) => e.id !== id));
+      toast({ title: "Event deleted" });
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to delete event.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to delete event.",
+        variant: "destructive",
       });
     }
     setDeleteConfirmId(null);
@@ -168,42 +200,56 @@ export default function CreateEvent() {
     }));
   };
 
+  const getOrganizerName = (id: string) =>
+    mockUsers.find((u) => u.id === id)?.name ?? "Unknown";
+
+  // -------------------------------------------------------
+  // RENDER
+  // -------------------------------------------------------
   return (
     <AdminLayout>
       <div className="space-y-6">
+        {/* HEADER */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Manage Events</h1>
-            <p className="text-muted-foreground">Create and manage your hackathons.</p>
+            <h1 className="text-3xl font-bold">Manage Events</h1>
+            <p className="text-muted-foreground">Create and edit hackathons.</p>
           </div>
-          <Button onClick={() => { setForm(initialForm); setEditingId(null); setIsDialogOpen(true); }}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Event
+
+          <Button
+            onClick={() => {
+              setForm(initialForm);
+              setEditingId(null);
+              setIsDialogOpen(true);
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Create Event
           </Button>
         </div>
 
-        {/* Events List */}
+        {/* EVENTS LIST */}
         <div className="grid gap-4">
           {events.map((event) => (
             <Card key={event.id}>
               <CardContent className="flex items-center justify-between p-4">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-foreground">{event.name}</h3>
+                <div>
+                  <h3 className="font-semibold">{event.eventName}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {event.organizer} • {event.location} • {event.mode}
+                    {getOrganizerName(event.organizerId)} • {event.location} •{" "}
+                    {event.mode}
                   </p>
-                  <div className="mt-2 flex gap-1">
-                    {event.tags.slice(0, 3).map((tag) => (
-                      <Badge key={tag} variant="outline" className="text-xs">
+
+                  <div className="flex gap-1 mt-2">
+                    {(event.tags ?? []).slice(0, 3).map((tag) => (
+                      <Badge key={tag} variant="outline">
                         {tag}
                       </Badge>
                     ))}
                   </div>
                 </div>
+
                 <div className="flex items-center gap-2">
-                  <Badge variant={event.status === 'upcoming' ? 'default' : 'secondary'}>
-                    {event.status}
-                  </Badge>
+                  <Badge variant="secondary">{event.status ?? "N/A"}</Badge>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -211,7 +257,11 @@ export default function CreateEvent() {
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleEdit(event)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleEdit(event)}
+                  >
                     <Pencil className="h-4 w-4" />
                   </Button>
                   <Button
@@ -227,67 +277,87 @@ export default function CreateEvent() {
           ))}
         </div>
 
-        {/* Create/Edit Dialog */}
+        {/* EVENT FORM DIALOG */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
             <DialogHeader>
-              <DialogTitle>{editingId ? 'Edit Event' : 'Create New Event'}</DialogTitle>
-              <DialogDescription>
-                Fill in the details for your hackathon event.
-              </DialogDescription>
+              <DialogTitle>
+                {editingId ? "Edit Event" : "Create Event"}
+              </DialogTitle>
+              <DialogDescription>Fill event details below.</DialogDescription>
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* EVENT NAME */}
               <div className="space-y-2">
-                <Label htmlFor="name">Event Name</Label>
+                <Label>Event Name</Label>
                 <Input
-                  id="name"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="TechCrunch Disrupt 2024"
+                  value={form.eventName}
+                  onChange={(e) =>
+                    setForm({ ...form, eventName: e.target.value })
+                  }
                   required
                 />
               </div>
 
+              {/* ORGANIZER */}
               <div className="space-y-2">
-                <Label htmlFor="organizer">Organizer</Label>
-                <Input
-                  id="organizer"
-                  value={form.organizer}
-                  onChange={(e) => setForm({ ...form, organizer: e.target.value })}
-                  placeholder="Your Organization"
-                  required
-                />
+                <Label>Organizer</Label>
+                <Select
+                  value={form.organizerId}
+                  onValueChange={(v) => setForm({ ...form, organizerId: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mockUsers
+                      .filter((u) => u.role === "organizer")
+                      .map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
 
+              {/* DESCRIPTION */}
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label>Description</Label>
                 <Textarea
-                  id="description"
                   value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="Describe your hackathon..."
-                  rows={4}
+                  onChange={(e) =>
+                    setForm({ ...form, description: e.target.value })
+                  }
+                  rows={3}
                   required
                 />
               </div>
 
+              {/* LOCATION + MODE */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
+                  <Label>Location</Label>
                   <Input
-                    id="location"
                     value={form.location}
-                    onChange={(e) => setForm({ ...form, location: e.target.value })}
-                    placeholder="San Francisco, CA or Online"
+                    onChange={(e) =>
+                      setForm({ ...form, location: e.target.value })
+                    }
                     required
                   />
                 </div>
+
                 <div className="space-y-2">
                   <Label>Mode</Label>
                   <Select
                     value={form.mode}
-                    onValueChange={(value: any) => setForm({ ...form, mode: value })}
+                    onValueChange={(v) =>
+                      setForm({
+                        ...form,
+                        mode: v as "online" | "offline" | "hybrid",
+                      })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -301,109 +371,127 @@ export default function CreateEvent() {
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Participation Type</Label>
-                  <Select
-                    value={form.participationType}
-                    onValueChange={(value: any) => setForm({ ...form, participationType: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="individual">Individual</SelectItem>
-                      <SelectItem value="team">Team</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {form.participationType === 'team' && (
-                  <div className="space-y-2">
-                    <Label>Team Size</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        min="1"
-                        value={form.teamSizeMin}
-                        onChange={(e) => setForm({ ...form, teamSizeMin: parseInt(e.target.value) })}
-                        placeholder="Min"
-                      />
-                      <Input
-                        type="number"
-                        min="1"
-                        value={form.teamSizeMax}
-                        onChange={(e) => setForm({ ...form, teamSizeMax: parseInt(e.target.value) })}
-                        placeholder="Max"
-                      />
-                    </div>
-                  </div>
-                )}
+              {/* PARTICIPATION TYPE */}
+              <div className="space-y-2">
+                <Label>Participation Type</Label>
+                <Select
+                  value={form.participationType}
+                  onValueChange={(v) =>
+                    setForm({
+                      ...form,
+                      participationType: v as "individual" | "team",
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="individual">Individual</SelectItem>
+                    <SelectItem value="team">Team</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
+              {/* TEAM SIZE IF TEAM */}
+              {form.participationType === "team" && (
+                <div className="space-y-2">
+                  <Label>Team Size</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      value={form.minTeamSize}
+                      onChange={(e) =>
+                        setForm({ ...form, minTeamSize: +e.target.value })
+                      }
+                    />
+                    <Input
+                      type="number"
+                      min={form.minTeamSize}
+                      value={form.maxTeamSize}
+                      onChange={(e) =>
+                        setForm({ ...form, maxTeamSize: +e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* DATES */}
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="deadline">Deadline</Label>
+                  <Label>Deadline</Label>
                   <Input
-                    id="deadline"
                     type="date"
                     value={form.deadline}
-                    onChange={(e) => setForm({ ...form, deadline: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, deadline: e.target.value })
+                    }
                     required
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="startDate">Start Date</Label>
+                  <Label>Start Date</Label>
                   <Input
-                    id="startDate"
                     type="date"
                     value={form.startDate}
-                    onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, startDate: e.target.value })
+                    }
                     required
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="endDate">End Date</Label>
+                  <Label>End Date</Label>
                   <Input
-                    id="endDate"
                     type="date"
                     value={form.endDate}
-                    onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, endDate: e.target.value })
+                    }
                     required
                   />
                 </div>
               </div>
 
+              {/* ENTRY FEE & MAX PARTICIPANTS */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="entryFee">Entry Fee ($)</Label>
+                  <Label>Entry Fee</Label>
                   <Input
-                    id="entryFee"
                     type="number"
-                    min="0"
+                    min={0}
                     value={form.entryFee}
-                    onChange={(e) => setForm({ ...form, entryFee: parseInt(e.target.value) })}
-                    placeholder="0 for free"
+                    onChange={(e) =>
+                      setForm({ ...form, entryFee: +e.target.value })
+                    }
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="maxParticipants">Max Participants</Label>
+                  <Label>Max Participants</Label>
                   <Input
-                    id="maxParticipants"
                     type="number"
-                    min="1"
+                    min={1}
                     value={form.maxParticipants}
-                    onChange={(e) => setForm({ ...form, maxParticipants: parseInt(e.target.value) })}
+                    onChange={(e) =>
+                      setForm({ ...form, maxParticipants: +e.target.value })
+                    }
                   />
                 </div>
               </div>
 
+              {/* TAGS */}
               <div className="space-y-2">
                 <Label>Tags</Label>
                 <div className="flex flex-wrap gap-2">
                   {availableTags.map((tag) => (
                     <Badge
                       key={tag}
-                      variant={form.tags.includes(tag) ? 'default' : 'outline'}
+                      variant={form.tags.includes(tag) ? "default" : "outline"}
                       className="cursor-pointer"
                       onClick={() => toggleTag(tag)}
                     >
@@ -414,30 +502,47 @@ export default function CreateEvent() {
               </div>
 
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                >
                   Cancel
                 </Button>
+
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? 'Saving...' : editingId ? 'Update Event' : 'Create Event'}
+                  {isSubmitting
+                    ? "Saving..."
+                    : editingId
+                    ? "Update Event"
+                    : "Create Event"}
                 </Button>
               </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
 
-        {/* Delete Confirmation */}
-        <Dialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
+        {/* DELETE CONFIRMATION */}
+        <Dialog
+          open={!!deleteConfirmId}
+          onOpenChange={() => setDeleteConfirmId(null)}
+        >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Delete Event</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete this event? This action cannot be undone.
+                This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
+
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteConfirmId(null)}
+              >
                 Cancel
               </Button>
+
               <Button
                 variant="destructive"
                 onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}

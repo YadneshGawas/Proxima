@@ -1,28 +1,32 @@
-import { useState, useEffect } from 'react';
-import { Search, Filter, X } from 'lucide-react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { HackathonCard } from '@/components/HackathonCard';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect } from "react";
+import { Search, Filter, X } from "lucide-react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { HackathonCard } from "@/components/HackathonCard";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Hackathon, HackathonFilters } from '@/types';
-import { hackathonService } from '@/services/api';
-import { availableTags } from '@/data/mockData';
+} from "@/components/ui/select";
+import { Hackathon, HackathonFilters } from "@/types";
+import { hackathonService } from "@/services/api";
 
 export default function Hackathons() {
   const [hackathons, setHackathons] = useState<Hackathon[]>([]);
   const [filteredHackathons, setFilteredHackathons] = useState<Hackathon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<HackathonFilters>({});
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  const availableTags = Array.from(
+    new Set(hackathons.flatMap((h) => h.tags ?? []))
+  );
 
   useEffect(() => {
     loadHackathons();
@@ -38,7 +42,7 @@ export default function Hackathons() {
       setHackathons(data);
       setFilteredHackathons(data);
     } catch (error) {
-      console.error('Failed to load hackathons:', error);
+      console.error("Failed to load hackathons:", error);
     } finally {
       setIsLoading(false);
     }
@@ -50,12 +54,13 @@ export default function Hackathons() {
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (h) =>
-          h.name.toLowerCase().includes(query) ||
-          h.organizer.toLowerCase().includes(query) ||
-          h.tags.some((tag) => tag.toLowerCase().includes(query))
-      );
+      filtered = filtered.filter((h) => {
+        const matchesName = h.eventName.toLowerCase().includes(query);
+        const matchesTags = (h.tags || []).some((tag) =>
+          tag.toLowerCase().includes(query)
+        );
+        return matchesName || matchesTags;
+      });
     }
 
     // Mode filter
@@ -65,13 +70,15 @@ export default function Hackathons() {
 
     // Participation type filter
     if (filters.participationType) {
-      filtered = filtered.filter((h) => h.participationType === filters.participationType);
+      filtered = filtered.filter(
+        (h) => h.participationType === filters.participationType
+      );
     }
 
     // Tags filter
     if (selectedTags.length > 0) {
       filtered = filtered.filter((h) =>
-        selectedTags.some((tag) => h.tags.includes(tag))
+        (h.tags || []).some((tag) => selectedTags.includes(tag))
       );
     }
 
@@ -85,12 +92,16 @@ export default function Hackathons() {
   };
 
   const clearFilters = () => {
-    setSearchQuery('');
+    setSearchQuery("");
     setFilters({});
     setSelectedTags([]);
   };
 
-  const hasActiveFilters = searchQuery || filters.mode || filters.participationType || selectedTags.length > 0;
+  const hasActiveFilters =
+    searchQuery ||
+    filters.mode ||
+    filters.participationType ||
+    selectedTags.length > 0;
 
   return (
     <DashboardLayout>
@@ -102,9 +113,10 @@ export default function Hackathons() {
           </p>
         </div>
 
-        {/* Search and Filters */}
+        {/* Search + Filters */}
         <div className="space-y-4">
           <div className="flex flex-col gap-4 sm:flex-row">
+            {/* Search Bar */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -114,10 +126,16 @@ export default function Hackathons() {
                 className="pl-9"
               />
             </div>
+
+            {/* Mode Filter */}
             <Select
-              value={filters.mode || 'all'}
+              value={filters.mode || "all"}
               onValueChange={(value) =>
-                setFilters({ ...filters, mode: value === 'all' ? undefined : value as any })
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                setFilters({
+                  ...filters,
+                  mode: value === "all" ? undefined : (value as any),
+                })
               }
             >
               <SelectTrigger className="w-full sm:w-[150px]">
@@ -130,12 +148,15 @@ export default function Hackathons() {
                 <SelectItem value="hybrid">Hybrid</SelectItem>
               </SelectContent>
             </Select>
+
+            {/* Participation Type */}
             <Select
-              value={filters.participationType || 'all'}
+              value={filters.participationType || "all"}
               onValueChange={(value) =>
                 setFilters({
                   ...filters,
-                  participationType: value === 'all' ? undefined : value as any,
+                  participationType:
+                    value === "all" ? undefined : (value as any),
                 })
               }
             >
@@ -153,13 +174,13 @@ export default function Hackathons() {
           {/* Tags Filter */}
           <div className="flex flex-wrap gap-2">
             <span className="flex items-center gap-1 text-sm text-muted-foreground">
-              <Filter className="h-4 w-4" />
-              Tags:
+              <Filter className="h-4 w-4" /> Tags:
             </span>
-            {availableTags.slice(0, 10).map((tag) => (
+
+            {(availableTags || []).slice(0, 10).map((tag) => (
               <Badge
                 key={tag}
-                variant={selectedTags.includes(tag) ? 'default' : 'outline'}
+                variant={selectedTags.includes(tag) ? "default" : "outline"}
                 className="cursor-pointer"
                 onClick={() => toggleTag(tag)}
               >
@@ -176,21 +197,25 @@ export default function Hackathons() {
           )}
         </div>
 
-        {/* Results */}
+        {/* Hackathon Results */}
         <div>
           <p className="mb-4 text-sm text-muted-foreground">
-            Showing {filteredHackathons.length} hackathon{filteredHackathons.length !== 1 ? 's' : ''}
+            Showing {filteredHackathons.length} hackathon
+            {filteredHackathons.length !== 1 ? "s" : ""}
           </p>
-          
+
           {isLoading ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-80 animate-pulse rounded-lg bg-muted" />
+                <div
+                  key={i}
+                  className="h-80 animate-pulse rounded-lg bg-muted"
+                />
               ))}
             </div>
           ) : filteredHackathons.length === 0 ? (
             <div className="rounded-lg border border-border p-8 text-center">
-              <p className="text-muted-foreground">No hackathons found matching your criteria.</p>
+              <p className="text-muted-foreground">No hackathons found.</p>
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
