@@ -106,23 +106,44 @@ export interface GlobalTeamMember {
 // ========================================
 // HACKATHON TEAMS
 // ========================================
-export interface HackathonTeam {
-  id: string;
-  hackathonId: string;
-  name: string;
-  createdById: string;
-  createdAt: string;
+// export interface HackathonTeam {
+//   id: string;
+//   hackathonId: string;
+//   name: string;
+//   createdById: string;
+//   createdAt: string;
 
-  members?: HackathonTeamMember[];
+//   members?: HackathonTeamMember[];
+// }
+
+// ========================================
+// HACKATHON TEAMS ✅ (BACKEND SOURCE OF TRUTH)
+// ========================================
+
+export type TeamMemberRole = "owner" | "coleader" | "member";
+
+// export interface HackathonTeamMember {
+//   id: string;
+//   hackathonTeamId: string;
+//   userId: string;
+//   joinedAt: string;
+
+//   user?: User;
+// }
+export interface HackathonTeamMember {
+  memberId: number;
+  name: string;
+  role: "owner" | "coleader" | "member";
+  joinedAt: string;
 }
 
-export interface HackathonTeamMember {
+export interface HackathonTeam {
   id: string;
-  hackathonTeamId: string;
-  userId: string;
-  joinedAt: string;
-
-  user?: User;
+  name: string;
+  createdBy: number;
+  createdAt: string;
+  membersCount: number;
+  members: HackathonTeamMember[];
 }
 
 // ========================================
