@@ -49,13 +49,15 @@ export interface Hackathon {
   // Computed UI fields
   registeredCount?: number;
   interestedCount?: number;
+  isInterested?: boolean;
+
   status?: 'upcoming' | 'ongoing' | 'completed';
   imageUrl?: string;
 
-  tags?: string[];
-
-  requirements?: string[];
-  prizes?: string[];
+   // 🔥 UI STRING FIELDS
+  requirementsText: string;
+  prizesText: string;
+  tagsText: string;
 }
 
 // ========================================

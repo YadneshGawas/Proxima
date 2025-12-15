@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { Search, Filter, X } from "lucide-react";
+
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { HackathonCard } from "@/components/HackathonCard";
 import { Input } from "@/components/ui/input";
@@ -13,34 +14,55 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Hackathon, HackathonFilters } from "@/types";
-import { hackathonService } from "@/services/api";
+
+import { Hackathon } from "@/types";
+import { hackathonService } from "@/services/hackathon/hackathon.service";
 
 export default function Hackathons() {
   const [hackathons, setHackathons] = useState<Hackathon[]>([]);
-  const [filteredHackathons, setFilteredHackathons] = useState<Hackathon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // ❌ OLD
+// const [searchQuery, setSearchQuery] = useState("");
+
+  // ✅ NEW (separate raw input + debounced value)
+  const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [filters, setFilters] = useState<HackathonFilters>({});
+
+  const [mode, setMode] = useState<
+    "online" | "offline" | "hybrid" | undefined
+  >(undefined);
+  const [participationType, setParticipationType] = useState<
+    "individual" | "team" | undefined
+  >(undefined);
+
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
+  // pagination (ready for later UI)
+  const [page] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  // derive tags from backend results (ok for now)
   const availableTags = Array.from(
     new Set(hackathons.flatMap((h) => h.tags ?? []))
   );
 
-  useEffect(() => {
-    loadHackathons();
-  }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [hackathons, searchQuery, filters, selectedTags]);
-
+  // -----------------------------
+  // LOAD HACKATHONS (BACKEND)
+  // -----------------------------
   const loadHackathons = async () => {
+    setIsLoading(true);
     try {
-      const data = await hackathonService.getAll();
-      setHackathons(data);
-      setFilteredHackathons(data);
+      const res = await hackathonService.getAll({
+        page,
+        search: searchQuery || undefined,
+        mode,
+        participation_type: participationType,
+        tag: selectedTags[0], // backend supports single tag
+      });
+
+      setHackathons(res.results);
+      setTotal(res.total);
     } catch (error) {
       console.error("Failed to load hackathons:", error);
     } finally {
@@ -48,61 +70,41 @@ export default function Hackathons() {
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...hackathons];
+  useEffect(() => {
+    loadHackathons();
+  }, [page, searchQuery, mode, participationType, selectedTags]);
 
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((h) => {
-        const matchesName = h.eventName.toLowerCase().includes(query);
-        const matchesTags = (h.tags || []).some((tag) =>
-          tag.toLowerCase().includes(query)
-        );
-        return matchesName || matchesTags;
-      });
-    }
-
-    // Mode filter
-    if (filters.mode) {
-      filtered = filtered.filter((h) => h.mode === filters.mode);
-    }
-
-    // Participation type filter
-    if (filters.participationType) {
-      filtered = filtered.filter(
-        (h) => h.participationType === filters.participationType
-      );
-    }
-
-    // Tags filter
-    if (selectedTags.length > 0) {
-      filtered = filtered.filter((h) =>
-        (h.tags || []).some((tag) => selectedTags.includes(tag))
-      );
-    }
-
-    setFilteredHackathons(filtered);
-  };
-
+  // -----------------------------
+  // UI HELPERS
+  // -----------------------------
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+      prev.includes(tag) ? [] : [tag] // enforce single tag
     );
   };
 
   const clearFilters = () => {
     setSearchQuery("");
-    setFilters({});
+    setMode(undefined);
+    setParticipationType(undefined);
     setSelectedTags([]);
   };
 
   const hasActiveFilters =
-    searchQuery ||
-    filters.mode ||
-    filters.participationType ||
-    selectedTags.length > 0;
+    !!searchQuery || !!mode || !!participationType || selectedTags.length > 0;
 
+  // ✅ DEBOUNCE SEARCH (prevents API spam)
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setSearchQuery(searchInput);
+    }, 400);
+
+    return () => clearTimeout(id);
+  }, [searchInput]);
+
+  // -----------------------------
+  // RENDER
+  // -----------------------------
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -116,26 +118,26 @@ export default function Hackathons() {
         {/* Search + Filters */}
         <div className="space-y-4">
           <div className="flex flex-col gap-4 sm:flex-row">
-            {/* Search Bar */}
+            {/* Search */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search hackathons..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                // ❌ OLD
+                  // onChange={(e) => setSearchQuery(e.target.value)}
+
+                  // ✅ NEW
+                  onChange={(e) => setSearchInput(e.target.value)}
                 className="pl-9"
               />
             </div>
 
-            {/* Mode Filter */}
+            {/* Mode */}
             <Select
-              value={filters.mode || "all"}
-              onValueChange={(value) =>
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                setFilters({
-                  ...filters,
-                  mode: value === "all" ? undefined : (value as any),
-                })
+              value={mode || "all"}
+              onValueChange={(v) =>
+                setMode(v === "all" ? undefined : (v as any))
               }
             >
               <SelectTrigger className="w-full sm:w-[150px]">
@@ -149,15 +151,11 @@ export default function Hackathons() {
               </SelectContent>
             </Select>
 
-            {/* Participation Type */}
+            {/* Participation */}
             <Select
-              value={filters.participationType || "all"}
-              onValueChange={(value) =>
-                setFilters({
-                  ...filters,
-                  participationType:
-                    value === "all" ? undefined : (value as any),
-                })
+              value={participationType || "all"}
+              onValueChange={(v) =>
+                setParticipationType(v === "all" ? undefined : (v as any))
               }
             >
               <SelectTrigger className="w-full sm:w-[150px]">
@@ -171,13 +169,13 @@ export default function Hackathons() {
             </Select>
           </div>
 
-          {/* Tags Filter */}
+          {/* Tags */}
           <div className="flex flex-wrap gap-2">
             <span className="flex items-center gap-1 text-sm text-muted-foreground">
               <Filter className="h-4 w-4" /> Tags:
             </span>
 
-            {(availableTags || []).slice(0, 10).map((tag) => (
+            {availableTags.slice(0, 10).map((tag) => (
               <Badge
                 key={tag}
                 variant={selectedTags.includes(tag) ? "default" : "outline"}
@@ -197,11 +195,10 @@ export default function Hackathons() {
           )}
         </div>
 
-        {/* Hackathon Results */}
+        {/* Results */}
         <div>
           <p className="mb-4 text-sm text-muted-foreground">
-            Showing {filteredHackathons.length} hackathon
-            {filteredHackathons.length !== 1 ? "s" : ""}
+            Showing {hackathons.length} of {total} hackathons
           </p>
 
           {isLoading ? (
@@ -213,13 +210,13 @@ export default function Hackathons() {
                 />
               ))}
             </div>
-          ) : filteredHackathons.length === 0 ? (
+          ) : hackathons.length === 0 ? (
             <div className="rounded-lg border border-border p-8 text-center">
               <p className="text-muted-foreground">No hackathons found.</p>
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {filteredHackathons.map((hackathon) => (
+              {hackathons.map((hackathon) => (
                 <HackathonCard key={hackathon.id} hackathon={hackathon} />
               ))}
             </div>

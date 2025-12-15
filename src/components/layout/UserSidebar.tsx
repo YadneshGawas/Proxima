@@ -7,6 +7,7 @@ import {
   Zap,
   Users,
   Coins,
+  Rocket,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -24,7 +25,6 @@ import {
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Rocket } from "lucide-react";
 
 const menuItems = [
   { title: "Home", url: "/dashboard", icon: Home },
@@ -38,7 +38,7 @@ const menuItems = [
 
 export function UserSidebar() {
   const { state } = useSidebar();
-  const { logout, user, becomeOrganizer } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const collapsed = state === "collapsed";
@@ -48,10 +48,9 @@ export function UserSidebar() {
     navigate("/");
   };
 
-  const handleBecomeOrganizer = async () => {
-    await becomeOrganizer();
-    navigate("/admin/create-event");
-  };
+const handleRoleCTA = () => {
+  navigate("/admin/create-event");
+};
 
   return (
     <Sidebar collapsible="icon">
@@ -62,11 +61,6 @@ export function UserSidebar() {
             alt="logo"
             className="h-8 w-8 object-contain"
           />
-          {/* {!collapsed && (
-            <span className="text-lg font-bold text-sidebar-foreground">
-              HackHub
-            </span>
-          )} */}
         </div>
       </SidebarHeader>
 
@@ -92,30 +86,29 @@ export function UserSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* {user?.role === 'user' && ( */}
+        {/* ROLE CTA */}
         <SidebarGroup>
           <SidebarGroupContent>
-            <div>
-              <Button
-                variant="outline"
-                className={`w-full ${
-                  collapsed ? "justify-center" : "justify-start"
-                }`}
-                onClick={handleBecomeOrganizer}
-              >
-                {collapsed ? (
-                  <Zap className="h-2 w-2" />
-                ) : (
-                  <>
-                    <Zap className="h-5 w-5" />
-                    Become Organizer
-                  </>
-                )}
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              className={`w-full ${
+                collapsed ? "justify-center" : "justify-start"
+              }`}
+              onClick={handleRoleCTA}
+            >
+              {collapsed ? (
+                <Zap className="h-5 w-5" />
+              ) : (
+                <>
+                  <Zap className="h-5 w-5 mr-2" />
+                  Organizer Dashboard
+                </>
+              )}
+            </Button>
+
+            
           </SidebarGroupContent>
         </SidebarGroup>
-        {/* )} */}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">

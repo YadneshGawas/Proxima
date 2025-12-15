@@ -17,7 +17,18 @@ interface HackathonCardProps {
 export function HackathonCard({ hackathon }: HackathonCardProps) {
   const navigate = useNavigate();
 
-  const formatDate = (date: string) => {
+  // ❌ OLD (unsafe – crashes if date is null)
+  // const formatDate = (date: string) => {
+  //   return new Date(date).toLocaleDateString("en-US", {
+  //     month: "short",
+  //     day: "numeric",
+  //     year: "numeric",
+  //   });
+  // };
+
+  // ✅ NEW (safe for optional dates)
+  const formatDate = (date?: string) => {
+    if (!date) return "N/A";
     return new Date(date).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -33,29 +44,43 @@ export function HackathonCard({ hackathon }: HackathonCardProps) {
       onClick={() => navigate(`/hackathons/${hackathon.id}`)}
     >
       <CardHeader className="p-0">
+        {/* ❌ OLD (card header disappears if image missing)
         {hackathon.imageUrl && (
           <div className="relative h-40 overflow-hidden rounded-t-lg">
+            ...
+          </div>
+        )}
+        */}
+
+        {/* ✅ NEW (always renders header, graceful fallback) */}
+        <div className="relative h-40 overflow-hidden rounded-t-lg bg-muted flex items-center justify-center">
+          
             <img
               src={hackathon.imageUrl}
               alt={hackathon.eventName}
+              loading="lazy"
+              referrerPolicy="no-referrer"
               className="h-full w-full object-cover transition-transform group-hover:scale-105"
+              onError={(e) => {
+                e.currentTarget.src = "/placeholder.png";
+              }}
             />
-            <div className="absolute top-2 right-2">
-              <Badge
-                variant={
-                  hackathon.status === "upcoming"
-                    ? "default"
-                    : hackathon.status === "ongoing"
-                    ? "secondary"
-                    : "outline"
-                }
-              >
-                {hackathon.status}
-              </Badge>
-            </div>
+          <div className="absolute top-2 right-2">
+            <Badge
+              variant={
+                hackathon.status === "upcoming"
+                  ? "default"
+                  : hackathon.status === "ongoing"
+                  ? "secondary"
+                  : "outline"
+              }
+            >
+              {hackathon.status}
+            </Badge>
           </div>
-        )}
+        </div>
       </CardHeader>
+
       <CardContent className="p-4">
         <h3 className="mb-2 text-lg font-semibold text-foreground line-clamp-1">
           {hackathon.eventName}
@@ -84,14 +109,17 @@ export function HackathonCard({ hackathon }: HackathonCardProps) {
             <Calendar className="h-4 w-4" />
             <span>Posted: {formatDate(hackathon.createdAt)}</span>
           </div>
+
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             <span>Deadline: {formatDate(hackathon.deadline)}</span>
           </div>
+
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4" />
-            <span>{hackathon.location}</span>
+            <span>{hackathon.location || "Online"}</span>
           </div>
+
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             <span className="capitalize">{hackathon.participationType}</span>
@@ -103,11 +131,20 @@ export function HackathonCard({ hackathon }: HackathonCardProps) {
           </div>
         </div>
       </CardContent>
+
       <CardFooter className="border-t border-border p-4">
         <div className="flex w-full items-center justify-between text-sm">
+          {/* ❌ OLD (field does not exist in backend)
           <span className="text-muted-foreground">
             {hackathon.registeredCount} registered
           </span>
+          */}
+
+          {/* ✅ NEW (real backend field) */}
+          <span className="text-muted-foreground">
+            {hackathon.interestedCount} interested
+          </span>
+
           <Button size="sm">View Details</Button>
         </div>
       </CardFooter>

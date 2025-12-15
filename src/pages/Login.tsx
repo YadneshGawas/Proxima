@@ -11,8 +11,10 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, loginWithGoogle, loginWithFacebook } = useAuth();
+  // const { login, loginWithGoogle, loginWithFacebook } = useAuth();
+  const {login} = useAuth()
   const { toast } = useToast();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -26,12 +28,13 @@ export default function Login() {
         title: 'Welcome back!',
         description: 'You have successfully logged in.',
       });
+      navigate("/dashboard");
       // Route based on user role (check if admin email)
-      if (email.includes('admin') || email.includes('organizer')) {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
+      // if (email.includes('admin') || email.includes('organizer')) {
+      //   navigate('/admin');
+      // } else {
+      //   navigate('/dashboard');
+      // }
     } catch (error) {
       toast({
         title: 'Login failed',
@@ -43,39 +46,39 @@ export default function Login() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setIsLoading(true);
-    try {
-      await loginWithGoogle();
-      toast({ title: 'Welcome!', description: 'Logged in with Google.' });
-      navigate('/dashboard');
-    } catch (error) {
-      toast({
-        title: 'Google login failed',
-        description: 'Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // const handleGoogleLogin = async () => {
+  //   setIsLoading(true);
+  //   try {
+  //     await loginWithGoogle();
+  //     toast({ title: 'Welcome!', description: 'Logged in with Google.' });
+  //     navigate('/dashboard');
+  //   } catch (error) {
+  //     toast({
+  //       title: 'Google login failed',
+  //       description: 'Please try again.',
+  //       variant: 'destructive',
+  //     });
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
-  const handleFacebookLogin = async () => {
-    setIsLoading(true);
-    try {
-      await loginWithFacebook();
-      toast({ title: 'Welcome!', description: 'Logged in with Facebook.' });
-      navigate('/dashboard');
-    } catch (error) {
-      toast({
-        title: 'Facebook login failed',
-        description: 'Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // const handleFacebookLogin = async () => {
+  //   setIsLoading(true);
+  //   try {
+  //     await loginWithFacebook();
+  //     toast({ title: 'Welcome!', description: 'Logged in with Facebook.' });
+  //     navigate('/dashboard');
+  //   } catch (error) {
+  //     toast({
+  //       title: 'Facebook login failed',
+  //       description: 'Please try again.',
+  //       variant: 'destructive',
+  //     });
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -124,13 +127,13 @@ export default function Login() {
             </Button>
           </form>
 
-          <div className="my-6 flex items-center gap-4">
+          {/* <div className="my-6 flex items-center gap-4">
             <Separator className="flex-1" />
             <span className="text-xs text-muted-foreground">OR</span>
             <Separator className="flex-1" />
-          </div>
+          </div> */}
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Button
               type="button"
               variant="outline"
@@ -153,7 +156,7 @@ export default function Login() {
               </svg>
               Continue with Facebook
             </Button>
-          </div>
+          </div> */}
         </CardContent>
         <CardFooter className="justify-center">
           <p className="text-sm text-muted-foreground">

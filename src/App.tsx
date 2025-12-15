@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import ProtectedRoute from "@/routes/ProtectedRoute";
+
 
 // Pages
 import Landing from "./pages/Landing";
@@ -44,7 +46,9 @@ const App = () => (
               <Route path="/register" element={<Register />} />
               
               {/* User Routes */}
+              <Route element={<ProtectedRoute/>}>
               <Route path="/dashboard" element={<Dashboard />} />
+              </Route>
               <Route path="/hackathons" element={<Hackathons />} />
               <Route path="/hackathons/:id" element={<HackathonDetail />} />
               <Route path="/teams" element={<Teams />} />

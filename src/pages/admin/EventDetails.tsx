@@ -37,15 +37,102 @@ import {
   GlobalTeamMember,
   HackathonTeamMember,
 } from "@/types";
-import {
-  mockHackathons,
-  mockRegistrations,
-  mockUsers,
-  mockTeams,
-  mockHackathonTeams,
-} from "@/data/mockData";
+import { hackathonService } from "@/services/hackathon/hackathon.service";
+
 
 import { registrationService } from "@/services/api";
+
+function EventOverviewCard({ hackathon }: { hackathon: Hackathon }) {
+  return (
+    <Card>
+      <CardHeader>
+
+      </CardHeader>
+
+      <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+        <div>
+          <p className="text-muted-foreground">Status</p>
+          <Badge>{hackathon.status}</Badge>
+        </div>
+
+        <div>
+          <p className="text-muted-foreground">Entry Fee</p>
+          <p>₹ {hackathon.entryFee}</p>
+        </div>
+
+        <div>
+          <p className="text-muted-foreground">Team Size</p>
+          <p>
+            {hackathon.participationType === "team"
+              ? `${hackathon.minTeamSize} – ${hackathon.maxTeamSize}`
+              : "Individual"}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-muted-foreground">Max Participants</p>
+          <p>{hackathon.maxParticipants ?? "Unlimited"}</p>
+        </div>
+
+        <div>
+          <p className="text-muted-foreground">Deadline</p>
+          <p>{new Date(hackathon.deadline).toDateString()}</p>
+        </div>
+
+        <div>
+          <p className="text-muted-foreground">Start Date</p>
+          <p>{new Date(hackathon.startDate).toDateString()}</p>
+        </div>
+
+        <div>
+          <p className="text-muted-foreground">End Date</p>
+          <p>{new Date(hackathon.endDate).toDateString()}</p>
+        </div>
+
+        <div className="col-span-2 md:col-span-3">
+          <p className="text-muted-foreground">Description</p>
+          <p>{hackathon.description}</p>
+        </div>
+
+        {hackathon.tags?.length > 0 && (
+          <div className="col-span-2 md:col-span-3">
+            <p className="text-muted-foreground mb-1">Tags</p>
+            <div className="flex gap-2 flex-wrap">
+              {hackathon.tags.map((tag) => (
+                <Badge key={tag} variant="outline">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {hackathon.requirements?.length > 0 && (
+          <div className="col-span-2 md:col-span-3">
+            <p className="text-muted-foreground">Requirements</p>
+            <ul className="list-disc list-inside">
+              {hackathon.requirements.map((req) => (
+                <li key={req}>{req}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {hackathon.prizes?.length > 0 && (
+          <div className="col-span-2 md:col-span-3">
+            <p className="text-muted-foreground">Prizes</p>
+            <ul className="list-disc list-inside">
+              {hackathon.prizes.map((prize, idx) => (
+                <li key={idx}>₹ {prize}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 
 export default function EventDetails() {
   const { id } = useParams<{ id: string }>();
@@ -62,95 +149,109 @@ export default function EventDetails() {
   }, [id]);
 
   const loadData = async () => {
-    if (!id) return;
+  if (!id) return;
 
-    try {
-      const hack = mockHackathons.find((h) => h.id === id) || null;
-      setHackathon(hack);
+  try {
+    // 1️⃣ Fetch hackathon
+    const hack = await hackathonService.getById(id);
+    setHackathon(hack);
 
-      const regData = mockRegistrations
-        .filter((r) => r.hackathonId === id)
-        .map((reg) => formatRegistration(reg));
+    // 2️⃣ Fetch registrations for this hackathon
+    const regRes = await registrationService.getByHackathon(id);
 
-      setRegistrations(regData);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load event details.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    // 3️⃣ Normalize for UI
+    const formatted = regRes.map((reg: Registration) =>
+      formatRegistration(reg)
+    );
+
+    setRegistrations(formatted);
+  } catch {
+    toast({
+      title: "Error",
+      description: "Failed to load event details.",
+      variant: "destructive",
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   /** Convert raw Registration into UI-friendly structure */
-  const formatRegistration = (reg: Registration) => {
-    // Individual registration
-    if (reg.userId) {
-      const user = mockUsers.find((u) => u.id === reg.userId);
-      return {
-        ...reg,
-        type: "individual",
-        teamName: "Individual Entry",
-        contactEmail: user?.email || "",
-        contactPhone: "-",
-        teamMembers: [
-          {
-            name: user?.name || "Unknown",
-            email: user?.email || "",
-            role: "Participant",
-          },
-        ],
-      };
-    }
+  // const formatRegistration = (reg: Registration) => {
+  //   // Individual registration
+  //   if (reg.userId) {
+  //     const user = mockUsers.find((u) => u.id === reg.userId);
+  //     return {
+  //       ...reg,
+  //       type: "individual",
+  //       teamName: "Individual Entry",
+  //       contactEmail: user?.email || "",
+  //       contactPhone: "-",
+  //       teamMembers: [
+  //         {
+  //           name: user?.name || "Unknown",
+  //           email: user?.email || "",
+  //           role: "Participant",
+  //         },
+  //       ],
+  //     };
+  //   }
 
-    // Global team registration
-    if (reg.globalTeamId) {
-      const team = mockTeams.find((t) => t.id === reg.globalTeamId);
-      const members = (team?.members || []).map((m) => {
-        const u = mockUsers.find((u) => u.id === m.userId);
-        return {
-          name: u?.name || "",
-          email: u?.email || "",
-          role: m.role,
-        };
-      });
+  //   // Global team registration
+  //   if (reg.globalTeamId) {
+  //     const team = mockTeams.find((t) => t.id === reg.globalTeamId);
+  //     const members = (team?.members || []).map((m) => {
+  //       const u = mockUsers.find((u) => u.id === m.userId);
+  //       return {
+  //         name: u?.name || "",
+  //         email: u?.email || "",
+  //         role: m.role,
+  //       };
+  //     });
 
-      const ownerUser = mockUsers.find((u) => u.id === team?.ownerId);
+  //     const ownerUser = mockUsers.find((u) => u.id === team?.ownerId);
 
-      return {
-        ...reg,
-        teamName: team?.name || "Team",
-        contactEmail: ownerUser?.email || "",
-        contactPhone: "-",
-        teamMembers: members,
-      };
-    }
+  //     return {
+  //       ...reg,
+  //       teamName: team?.name || "Team",
+  //       contactEmail: ownerUser?.email || "",
+  //       contactPhone: "-",
+  //       teamMembers: members,
+  //     };
+  //   }
 
-    // Hackathon team registration
-    if (reg.hackathonTeamId) {
-      const ht = mockHackathonTeams.find((t) => t.id === reg.hackathonTeamId);
-      const members = (ht?.members || []).map((m) => {
-        const u = mockUsers.find((u) => u.id === m.userId);
-        return {
-          name: u?.name || "",
-          email: u?.email || "",
-          role: "Member",
-        };
-      });
+  //   // Hackathon team registration
+  //   if (reg.hackathonTeamId) {
+  //     const ht = mockHackathonTeams.find((t) => t.id === reg.hackathonTeamId);
+  //     const members = (ht?.members || []).map((m) => {
+  //       const u = mockUsers.find((u) => u.id === m.userId);
+  //       return {
+  //         name: u?.name || "",
+  //         email: u?.email || "",
+  //         role: "Member",
+  //       };
+  //     });
 
-      return {
-        ...reg,
-        teamName: ht?.name || "Hackathon Team",
-        contactEmail: members[0]?.email || "",
-        contactPhone: "-",
-        teamMembers: members,
-      };
-    }
+  //     return {
+  //       ...reg,
+  //       teamName: ht?.name || "Hackathon Team",
+  //       contactEmail: members[0]?.email || "",
+  //       contactPhone: "-",
+  //       teamMembers: members,
+  //     };
+  //   }
 
-    return reg;
-  };
+  //   return reg;
+  // };
+
+  const formatRegistration = (reg: Registration) => ({
+  ...reg,
+  teamName: reg.team_name ?? "Individual Entry",
+  contactEmail: reg.contact_email ?? "-",
+  contactPhone: reg.contact_phone ?? "-",
+  teamMembers: reg.team_members ?? [],
+});
 
   /** Approve / Reject Registration */
   const handleUpdateStatus = async (
@@ -275,6 +376,9 @@ export default function EventDetails() {
             </Button>
           </div>
         </div>
+
+        {/* EVENT OVERVIEW */}
+          <EventOverviewCard hackathon={hackathon} />
 
         {/* STATS */}
         <div className="grid grid-cols-4 gap-4">
