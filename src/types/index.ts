@@ -53,6 +53,7 @@ export interface Hackathon {
 
   status?: 'upcoming' | 'ongoing' | 'completed';
   imageUrl?: string;
+  is_finalized?: boolean;
 
    // 🔥 UI STRING FIELDS
   requirementsText: string;
@@ -63,21 +64,42 @@ export interface Hackathon {
 // ========================================
 // REGISTRATION
 // ========================================
-export type RegistrationStatus = 0 | 1 | 2;
-// 0 = pending, 1 = approved, 2 = rejected
+export type RegistrationStatus = "pending" | "approved" | "rejected";
+
+/* =========================
+   TEAM TYPES (ORGANIZER VIEW)
+========================= */
+
+export interface TeamMember {
+  user_id: number;
+  role: "owner" | "coleader" | "member";
+  joined_at: string;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  created_by: number;
+  members: TeamMember[];
+}
+
+/* =========================
+   REGISTRATION
+========================= */
 
 export interface Registration {
   id: string;
-  hackathonId: string;
+  hackathon_id: string;
 
-  userId?: string;           // individual registration
-  globalTeamId?: string;     // global team mode
-  hackathonTeamId?: string;  // temp hackathon team mode
+  user_id?: number | null;
+  team_id?: string | null;
 
-  registeredAt: string;
   status: RegistrationStatus;
-}
+  registered_at: string;
 
+  // 🔥 Organizer-only enrichment
+  team?: Team | null;
+}
 // ========================================
 // GLOBAL TEAMS
 // ========================================

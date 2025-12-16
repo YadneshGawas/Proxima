@@ -129,4 +129,36 @@ export const teamService = {
 
     return res.json();
   },
+    /* ============================
+    CREATE TEAM
+  ============================ */
+  async createTeam(name: string): Promise<HackathonTeam> {
+    const res = await fetch(`${BASE_URL}/team/create`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ name }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to create team");
+    }
+
+    const t = await res.json();
+
+    return {
+      id: t.id,
+      name: t.name,
+      createdBy: t.created_by,
+      createdAt: t.created_at,
+      membersCount: 1,
+      members: [
+        {
+          memberId: t.created_by,
+          name: "You",
+          role: "owner",
+          joinedAt: t.created_at,
+        },
+      ],
+    };
+  }
 };

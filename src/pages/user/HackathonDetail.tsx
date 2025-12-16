@@ -22,45 +22,88 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 import { useToast } from "@/hooks/use-toast";
-import { Hackathon } from "@/types";
-import { hackathonService } from "@/services/hackathon/hackathon.service";
 import { useAuth } from "@/contexts/AuthContext";
+import { SubmitProjectModal } from "@/components/SubmitProjectModal";
+
+import { Hackathon, Registration } from "@/types";
+import { hackathonService } from "@/services/hackathon/hackathon.service";
+import { registrationService } from "@/services/registration/registration.service";
+import {
+  submissionService,
+  ProjectSubmission,
+} from "@/services/submission/submission.service";
+import { ViewWinnersModal } from "@/components/ViewWinnersModal";
+
 
 export default function HackathonDetail() {
+  /* ========================
+     ROUTING & CONTEXT
+  ======================== */
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
 
+  /* ========================
+     STATE
+  ======================== */
   const [hackathon, setHackathon] = useState<Hackathon | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
+  const [myRegistration, setMyRegistration] =
+    useState<Registration | null>(null);
+  const [isSubmitProjectOpen, setIsSubmitProjectOpen] = useState(false);
+  const [mySubmission, setMySubmission] =
+    useState<ProjectSubmission | null>(null);
+  const [isLoadingSubmission, setIsLoadingSubmission] = useState(false);
+  const [isViewWinnersOpen, setIsViewWinnersOpen] = useState(false);
 
-  const RegState = {
-    NOT_REGISTERED: 0,
-  } as const;
+  /* ========================
+     DERIVED FLAGS
+  ======================== */
+  const isRegistered = Boolean(myRegistration);
+  const isApproved = myRegistration?.status === "approved";
+  const isRejected = myRegistration?.status === "rejected";
 
-  const [btnState] = useState<number>(RegState.NOT_REGISTERED);
-
-  // -------------------------
-  // LOAD HACKATHON
-  // -------------------------
+  /* ========================
+     LOAD DATA
+  ======================== */
   useEffect(() => {
-    if (id) loadHackathon();
+    if (!id) return;
+    loadHackathon();
   }, [id]);
 
   const loadHackathon = async () => {
     setIsLoading(true);
-    try {
-      const data = await hackathonService.getById(id!);
-      setHackathon(data);
 
-      // ✅ sync interest from backend
-      if (typeof data.isInterested === "boolean") {
-        setIsInterested(data.isInterested);
+    try {
+      /* 1️⃣ Hackathon details */
+      const hackathonData = await hackathonService.getById(id!);
+      setHackathon(hackathonData);
+
+      if (typeof hackathonData.isInterested === "boolean") {
+        setIsInterested(hackathonData.isInterested);
       }
-    } catch {
+
+      /* 2️⃣ Registration state (single source of truth) */
+      if (user) {
+        const reg = await registrationService.checkRegistration(id!);
+
+        if (reg.registered) {
+          setMyRegistration({
+            id: reg.registration_id!,
+            hackathon_id: id!,
+            team_id: reg.team_id ?? undefined,
+            status: reg.status!,
+            registered_at: new Date().toISOString(),
+          } as Registration);
+        } else {
+          setMyRegistration(null);
+        }
+      }
+    } catch (err) {
+      console.error("Hackathon load failed:", err);
       toast({
         title: "Error",
         description: "Failed to load hackathon details.",
@@ -72,24 +115,43 @@ export default function HackathonDetail() {
     }
   };
 
-  // -------------------------
-  // INTEREST TOGGLE (FIXED)
-  // -------------------------
+  /* ========================
+     LOAD SUBMISSION (if user is approved)
+  ======================== */
+  useEffect(() => {
+    if (!id || !user || !isApproved) return;
+
+    loadMySubmission();
+  }, [id, isApproved]);
+
+  const loadMySubmission = async () => {
+    if (!id) return;
+
+    setIsLoadingSubmission(true);
+    try {
+      // Check if user has submitted a project for this hackathon
+      const submission = await submissionService.getUserSubmission(id);
+      if (submission) {
+        setMySubmission(submission);
+      }
+    } catch (err) {
+      console.error("Failed to load submission:", err);
+    } finally {
+      setIsLoadingSubmission(false);
+    }
+  };
+
+  /* ========================
+     INTEREST TOGGLE
+  ======================== */
   const handleMarkInterested = async () => {
     if (!hackathon || !user) return;
 
     try {
       const res = await hackathonService.toggleInterest(hackathon.id);
-
-      // ✅ instant UI sync (NO REFRESH NEEDED)
       setIsInterested(res.is_interested);
       setHackathon((prev) =>
-        prev
-          ? {
-              ...prev,
-              interestedCount: res.interested_count,
-            }
-          : prev
+        prev ? { ...prev, interestedCount: res.interested_count } : prev
       );
     } catch {
       toast({
@@ -110,6 +172,9 @@ export default function HackathonDetail() {
         })
       : "Not specified";
 
+  /* ========================
+     LOADING
+  ======================== */
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -123,8 +188,11 @@ export default function HackathonDetail() {
 
   if (!hackathon) return null;
 
+  /* ========================
+     UI
+  ======================== */
   return (
-    <DashboardLayout>
+     <DashboardLayout>
       <div className="space-y-6">
         <Button variant="ghost" onClick={() => navigate("/hackathons")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -247,6 +315,7 @@ export default function HackathonDetail() {
             )}
           </div>
 
+        
           {/* RIGHT */}
           <div className="space-y-6">
             <Card>
@@ -341,21 +410,78 @@ export default function HackathonDetail() {
               </CardContent>
             </Card>
 
-            <Button
-              className="w-full"
-              size="lg"
-              onClick={() => {
-                if (!user) {
-                  toast({
-                    title: "Login Required",
-                    description: "Please log in to register",
-                  });
-                  return;
+            {/* REGISTRATION STATUS */}
+            {myRegistration && (
+              <Badge
+                className="w-full justify-center"
+                variant={
+                  myRegistration.status === "approved"
+                    ? "default"
+                    : myRegistration.status === "pending"
+                    ? "secondary"
+                    : "destructive"
                 }
-                setIsRegistrationOpen(true);
-              }}
+              >
+                Registered via{" "}
+                {myRegistration.team_id ? "Team" : "Individual"} ·{" "}
+                {myRegistration.status}
+              </Badge>
+            )}
+
+            {/* ACTION */}
+            {mySubmission ? (
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={() =>
+                  navigate(
+                    `/hackathons/${hackathon.id}/submission/${mySubmission.id}`
+                  )
+                }
+              >
+                View Submitted Project
+              </Button>
+            ) : (
+              <Button
+                size="lg"
+                className="w-full"
+                disabled={isRejected || isLoadingSubmission || !isApproved}
+                onClick={() => {
+                  if (!user) {
+                    toast({
+                      title: "Login Required",
+                      description: "Please log in to continue",
+                    });
+                    return;
+                  }
+
+                  if (!isRegistered) {
+                    setIsRegistrationOpen(true);
+                    return;
+                  }
+
+                  if (isApproved) {
+                    setIsSubmitProjectOpen(true);
+                    return;
+                  }
+                }}
+              >
+                {!isRegistered && "Register Now"}
+                {isRegistered && !isRejected && !isApproved && "Pending Approval"}
+                {isRegistered && !isRejected && isApproved && "Submit Project"}
+                {isRejected && "Registration Rejected"}
+              </Button>
+            )}
+
+            {/* VIEW WINNERS */}
+            <Button
+              size="lg"
+              className="w-full"
+              variant="outline"
+              onClick={() => setIsViewWinnersOpen(true)}
             >
-              Register Now
+              <Trophy className="mr-2 h-4 w-4" />
+              View Winners
             </Button>
           </div>
         </div>
@@ -366,6 +492,59 @@ export default function HackathonDetail() {
         onOpenChange={setIsRegistrationOpen}
         hackathon={hackathon}
       />
+
+      {isApproved && myRegistration?.team_id && (
+        <SubmitProjectModal
+          isOpen={isSubmitProjectOpen}
+          onClose={() => setIsSubmitProjectOpen(false)}
+          onSuccess={(submissionId) => {
+            setMySubmission({
+              id: submissionId,
+              hackathon_id: id!,
+              project_title: "",
+              project_desc: "",
+              github_url: "",
+              team: myRegistration.team || { id: myRegistration.team_id, name: "", created_by: 0, members: [] },
+              created_at: new Date().toISOString(),
+            } as any);
+            toast({
+              title: "Success",
+              description: "Project submitted successfully!",
+            });
+          }}
+          hackathonId={id!}
+          teamId={myRegistration.team_id}
+        />
+      )}
+
+      <ViewWinnersModal
+        isOpen={isViewWinnersOpen}
+        hackathonId={id!}
+        onOpenChange={setIsViewWinnersOpen}
+      />
     </DashboardLayout>
+  );
+}
+
+/* ========================
+   SMALL UI HELPER
+======================== */
+function DetailRow({
+  icon,
+  label,
+  value,
+}: {
+  icon: JSX.Element;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex gap-3 items-start">
+      <span className="text-muted-foreground">{icon}</span>
+      <div>
+        <p className="text-sm text-muted-foreground">{label}</p>
+        <p className="font-medium">{value}</p>
+      </div>
+    </div>
   );
 }

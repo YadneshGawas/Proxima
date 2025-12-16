@@ -1,94 +1,126 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Eye } from "lucide-react";
+
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 import {
-  mockRegistrations,
-  mockSubmissions,
-  mockTeams,
-  mockHackathonTeams,
-  mockUsers,
-} from "@/data/mockData";
+  submissionService,
+  ProjectSubmission,
+} from "@/services/submission/submission.service";
 
-export default function SubmissionListPage() {
-  const { id } = useParams();
+export default function ProjectSubmissionPage() {
+  const { id: hackathonId } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // All submissions for this hackathon
-  const submissions = mockSubmissions.filter((s) => s.hackathonId === id);
+  const [submissions, setSubmissions] = useState<ProjectSubmission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Helper: Resolve Team Name
-  const resolveTeamName = (registrationId: string) => {
-    const reg = mockRegistrations.find((r) => r.id === registrationId);
-    if (!reg) return "Unknown Team";
-
-    if (reg.globalTeamId) {
-      return mockTeams.find((t) => t.id === reg.globalTeamId)?.name || "Team";
+  useEffect(() => {
+    if (!hackathonId) {
+      console.warn("No hackathonId provided");
+      setLoading(false);
+      return;
     }
 
-    if (reg.hackathonTeamId) {
-      return (
-        mockHackathonTeams.find((ht) => ht.id === reg.hackathonTeamId)?.name ||
-        "Hackathon Team"
-      );
-    }
+    console.log("[ProjectSubmissionPage] Loading submissions for hackathon:", hackathonId);
 
-    if (reg.userId) {
-      return mockUsers.find((u) => u.id === reg.userId)?.name || "Individual";
-    }
+    submissionService
+      .listByHackathon(hackathonId)
+      .then((data) => {
+        console.log("[ProjectSubmissionPage] Submissions loaded:", data);
+        setSubmissions(data);
+        setError(null);
+      })
+      .catch((err) => {
+        console.error("[ProjectSubmissionPage] Failed to load submissions:", err);
+        setError(`Failed to load submissions: ${err.message}`);
+      })
+      .finally(() => setLoading(false));
+  }, [hackathonId]);
 
-    return "Unknown";
-  };
+  if (loading) {
+    return <AdminLayout>Loading submissions…</AdminLayout>;
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <Button variant="ghost" onClick={() => navigate(-1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
+        <div className="mt-4 p-4 border border-red-200 bg-red-50 rounded-md">
+          <p className="text-red-800">{error}</p>
+          <Button
+            variant="outline"
+            className="mt-2"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </Button>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Submissions</h1>
+      <div className="space-y-6">
         <Button variant="ghost" onClick={() => navigate(-1)}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Submitted Projects</CardTitle>
-        </CardHeader>
+        <h1 className="text-3xl font-bold">Project Submissions</h1>
 
-        <CardContent className="space-y-4">
-          {submissions.length === 0 && (
-            <p className="text-muted-foreground">No submissions yet.</p>
-          )}
-
-          {submissions.map((sub) => {
-            const teamName = resolveTeamName(sub.registrationId);
-
-            return (
-              <div
-                key={sub.id}
-                className="rounded-lg border border-border p-4 flex justify-between items-center"
-              >
-                <div>
-                  <h2 className="text-xl font-semibold">{teamName}</h2>
-                  <p className="text-muted-foreground">{sub.projectTitle}</p>
-
-                  <div className="mt-2">
-                    <Badge>Score: {sub.score ?? "Not Scored"}</Badge>
+        {submissions.length === 0 ? (
+          <p className="text-muted-foreground">
+            No submissions yet.
+          </p>
+        ) : (
+          <div className="grid gap-4">
+            {submissions.map((s) => (
+              <Card key={s.id}>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <CardTitle>{s.team.name}</CardTitle>
+                    {s.average_score !== undefined && s.average_score !== null && (
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">Average Score</p>
+                        <p className="text-lg font-semibold">{s.average_score}/100</p>
+                      </div>
+                    )}
                   </div>
-                </div>
+                </CardHeader>
 
-                <Button
-                  variant="outline"
-                  onClick={() => navigate(`/admin/${id}/submission/${sub.id}`)}
-                >
-                  Review Submission
-                </Button>
-              </div>
-            );
-          })}
-        </CardContent>
-      </Card>
+                <CardContent className="flex justify-between items-center">
+                  <div className="flex-1">
+                    <p className="font-medium">{s.project_title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {s.project_desc}
+                    </p>
+                  </div>
+
+                  <Button
+                    onClick={() =>
+                      navigate(
+                        `/admin/${hackathonId}/submission/${s.id}`
+                      )
+                    }
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    Review
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </AdminLayout>
   );
 }

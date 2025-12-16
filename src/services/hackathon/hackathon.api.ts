@@ -117,6 +117,21 @@ export const hackathonApi = {
     }
 
     return res.json(); // { interested_count, is_interested }
+  },
+  async refreshStatus(id: string): Promise<{ id: string; status: string }> {
+  const res = await fetch(
+    `${BASE_URL}/hackathon/${id}/refresh-status`,
+    {
+      method: "PATCH",
+      headers: authHeaders(),
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to refresh hackathon status");
   }
+
+  return res.json();
+}
 
 };

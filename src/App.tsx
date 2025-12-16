@@ -28,7 +28,8 @@ import NotFound from "./pages/NotFound";
 import ProjectSubmission from "./pages/admin/ProjectSubmission";
 import ReviewSubmissionPage from "./pages/admin/ReviewSubmissionPage";
 import ProjectExplorer from "./pages/user/ProjectExplorer"
-
+import CreateTeam from "./pages/user/TeamsCreate";
+import SubmissionDetail from "./pages/user/SubmissionDetail";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -58,6 +59,7 @@ const App = () => (
               <Route path="/contact" element={<Contact />} />
               <Route path="/hackathons/:id/HackathonWinners" element={<HackathonWinners />} />
               <Route path="/projects" element={<ProjectExplorer />} />
+              <Route path="/teams/create" element={<CreateTeam />} />
 
               
               
@@ -66,7 +68,8 @@ const App = () => (
               <Route path="/admin/analytics" element={<AdminAnalytics />} />
               <Route path="/admin/events/:id" element={<EventDetails />} />
               <Route path="/admin/:id/submission" element={<ProjectSubmission />} />
-              <Route path="/admin/:id/submission/:teamId" element={<ReviewSubmissionPage />} />
+              <Route path="/admin/:hackathonId/submission/:submissionId" element={<ReviewSubmissionPage />} />
+              <Route path="/hackathons/:hackathonId/submission/:submissionId" element={<SubmissionDetail />} />
               
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />

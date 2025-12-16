@@ -124,6 +124,11 @@ export const hackathonService = {
   // -----------------------
   toggleInterest(id: string) {
     return hackathonApi.toggleInterest(id);
-  }
+  },
+
+  async refreshStatus(id: string): Promise<{ id: string; status: string }> {
+  return hackathonApi.refreshStatus(id);
+}
+
 
 };
