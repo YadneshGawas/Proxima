@@ -1,5 +1,11 @@
 const BASE_URL = import.meta.env.VITE_API_URL;
 
+export interface CurrentTeam {
+  id: string;
+  name: string;
+  hackathon_id: string | null;
+}
+
 export interface RecentParticipation {
   hackathon_id: string;
   hackathon_name: string;
@@ -8,13 +14,7 @@ export interface RecentParticipation {
   participated_at: string;
 }
 
-export interface CurrentTeam {
-  id: string;
-  name: string;
-  hackathon_id?: string;
-}
-
-export interface UserAnalytics {
+export interface UserAnalyticsResponse {
   total_hackathons: number;
   wins: number;
   runner_up: number;
@@ -24,7 +24,7 @@ export interface UserAnalytics {
 }
 
 const authHeaders = () => {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("auth_token");
   return {
     "Content-Type": "application/json",
     ...(token && { Authorization: `Bearer ${token}` }),
@@ -36,16 +36,14 @@ const handleResponse = async (response: Response) => {
 
   if (!response.ok) {
     const message = data?.message || data?.error || "Request failed";
-    const error = new Error(message) as Error & { status?: number };
-    error.status = response.status;
-    throw error;
+    throw new Error(message);
   }
 
   return data;
 };
 
 export const userAnalyticsService = {
-  getMyAnalytics(): Promise<UserAnalytics> {
+  getMe(): Promise<UserAnalyticsResponse> {
     const url = `${BASE_URL}/users/analytics/me`;
     console.log("[UserAnalytics] Getting user analytics:", { url });
 
@@ -58,7 +56,7 @@ export const userAnalyticsService = {
         return result;
       })
       .catch((err) => {
-        console.error("[UserAnalytics] Analytics error:", err);
+        console.error("[UserAnalytics] Error:", err);
         throw err;
       });
   },
