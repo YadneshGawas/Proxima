@@ -445,7 +445,11 @@ export default function HackathonDetail() {
               <Button
                 size="lg"
                 className="w-full"
-                disabled={isRejected || isLoadingSubmission || !isApproved}
+                disabled={
+                      isLoadingSubmission ||
+                      isRejected ||
+                      (isRegistered && !isApproved)
+                    }
                 onClick={() => {
                   if (!user) {
                     toast({
