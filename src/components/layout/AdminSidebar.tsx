@@ -16,7 +16,7 @@ import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 
 const menuItems = [
-  { title: "Create Event", url: "/admin/create", icon: PlusCircle },
+  { title: "Create Event", url: "/admin/create-event", icon: PlusCircle },
   { title: "Analytics", url: "/admin/analytics", icon: BarChart3 },
 ];
 

@@ -155,125 +155,125 @@ function computeUserResultForHackathon(userId: string, hackathonId: string): { r
    ========= */
 
 /* AUTH SERVICE */
-export const authService = {
-  login: async (email: string, password: string): Promise<{ user: User; token: string }> => {
-    // mock: return first matching user by email or demo user u1
-    await delay(400);
-    const found = mockUsers.find((u) => u.email === email) || mockUsers[0];
-    return { user: found, token: "mock-jwt-token" };
-  },
+// export const authService = {
+//   login: async (email: string, password: string): Promise<{ user: User; token: string }> => {
+//     // mock: return first matching user by email or demo user u1
+//     await delay(400);
+//     const found = mockUsers.find((u) => u.email === email) || mockUsers[0];
+//     return { user: found, token: "mock-jwt-token" };
+//   },
 
-  register: async (name: string, email: string, password: string): Promise<{ user: User; token: string }> => {
-    await delay(500);
-    // simplistic: return a new user object (not mutating mockUsers file)
-    const newUser: User = {
-      id: String(Date.now()),
-      name,
-      email,
-      avatar: "",
-      code: `USR${String(Math.floor(Math.random() * 9000) + 1000)}`,
-      createdAt: new Date().toISOString(),
-      credits: 0,
-      role: "user",
-    };
-    return { user: newUser, token: "mock-jwt-token" };
-  },
+//   register: async (name: string, email: string, password: string): Promise<{ user: User; token: string }> => {
+//     await delay(500);
+//     // simplistic: return a new user object (not mutating mockUsers file)
+//     const newUser: User = {
+//       id: String(Date.now()),
+//       name,
+//       email,
+//       avatar: "",
+//       code: `USR${String(Math.floor(Math.random() * 9000) + 1000)}`,
+//       createdAt: new Date().toISOString(),
+//       credits: 0,
+//       role: "user",
+//     };
+//     return { user: newUser, token: "mock-jwt-token" };
+//   },
 
-  loginWithGoogle: async (token: string) => {
-    await delay(300);
-    return { user: mockUsers[0], token: "mock-jwt-token" };
-  },
+//   loginWithGoogle: async (token: string) => {
+//     await delay(300);
+//     return { user: mockUsers[0], token: "mock-jwt-token" };
+//   },
 
-  loginWithFacebook: async (token: string) => {
-    await delay(300);
-    return { user: mockUsers[0], token: "mock-jwt-token" };
-  },
+//   loginWithFacebook: async (token: string) => {
+//     await delay(300);
+//     return { user: mockUsers[0], token: "mock-jwt-token" };
+//   },
 
-  logout: async () => {
-    await delay(150);
-  },
+//   logout: async () => {
+//     await delay(150);
+//   },
 
-  getCurrentUser: async () => {
-    await delay(200);
-    // For demo, return first user (id="u1")
-    return mockUsers[0];
-  },
+//   getCurrentUser: async () => {
+//     await delay(200);
+//     // For demo, return first user (id="u1")
+//     return mockUsers[0];
+//   },
 
-  becomeOrganizer: async (userId: string) => {
-    await delay(250);
-    const u = findUserById(userId);
-    if (!u) throw new Error("User not found");
-    // Return a shallow copy with role changed (do not mutate original mock data)
-    return { ...u, role: "organizer" } as User;
-  },
-};
+//   becomeOrganizer: async (userId: string) => {
+//     await delay(250);
+//     const u = findUserById(userId);
+//     if (!u) throw new Error("User not found");
+//     // Return a shallow copy with role changed (do not mutate original mock data)
+//     return { ...u, role: "organizer" } as User;
+//   },
+// };
 
 /* HACKATHON SERVICE */
-export const hackathonService = {
-  getAll: async (filters?: HackathonFilters): Promise<Hackathon[]> => {
-    await delay(300);
-    let filtered = [...mockHackathons];
+// export const hackathonService = {
+//   getAll: async (filters?: HackathonFilters): Promise<Hackathon[]> => {
+//     await delay(300);
+//     let filtered = [...mockHackathons];
 
-    if (!filters) return filtered;
+//     if (!filters) return filtered;
 
-    if (filters.mode) filtered = filtered.filter((h) => h.mode === filters.mode);
-    if (filters.participationType) filtered = filtered.filter((h) => h.participationType === filters.participationType);
-    if (filters.tags && filters.tags.length) {
-      filtered = filtered.filter((h) => Array.isArray(h.tags) && h.tags.some((t) => filters.tags!.includes(t)));
-    }
-    if (filters.organizer) filtered = filtered.filter((h) => h.organizerId === filters.organizer);
+//     if (filters.mode) filtered = filtered.filter((h) => h.mode === filters.mode);
+//     if (filters.participationType) filtered = filtered.filter((h) => h.participationType === filters.participationType);
+//     if (filters.tags && filters.tags.length) {
+//       filtered = filtered.filter((h) => Array.isArray(h.tags) && h.tags.some((t) => filters.tags!.includes(t)));
+//     }
+//     if (filters.organizer) filtered = filtered.filter((h) => h.organizerId === filters.organizer);
 
-    if (filters.dateRange?.start) {
-      const start = new Date(filters.dateRange.start);
-      filtered = filtered.filter((h) => (h.startDate ? new Date(h.startDate) >= start : true));
-    }
-    if (filters.dateRange?.end) {
-      const end = new Date(filters.dateRange.end);
-      filtered = filtered.filter((h) => (h.endDate ? new Date(h.endDate) <= end : true));
-    }
+//     if (filters.dateRange?.start) {
+//       const start = new Date(filters.dateRange.start);
+//       filtered = filtered.filter((h) => (h.startDate ? new Date(h.startDate) >= start : true));
+//     }
+//     if (filters.dateRange?.end) {
+//       const end = new Date(filters.dateRange.end);
+//       filtered = filtered.filter((h) => (h.endDate ? new Date(h.endDate) <= end : true));
+//     }
 
-    return filtered;
-  },
+//     return filtered;
+//   },
 
-  getById: async (id: string): Promise<Hackathon> => {
-    await delay(250);
-    const found = mockHackathons.find((h) => h.id === id);
-    if (!found) throw new Error("Hackathon not found");
-    return found;
-  },
+//   getById: async (id: string): Promise<Hackathon> => {
+//     await delay(250);
+//     const found = mockHackathons.find((h) => h.id === id);
+//     if (!found) throw new Error("Hackathon not found");
+//     return found;
+//   },
 
-  getNearby: async (_lat: number, _lng: number, _radius: number = 50): Promise<Hackathon[]> => {
-    await delay(250);
-    return mockHackathons.filter((h) => h.mode === "offline" || h.mode === "hybrid");
-  },
+//   getNearby: async (_lat: number, _lng: number, _radius: number = 50): Promise<Hackathon[]> => {
+//     await delay(250);
+//     return mockHackathons.filter((h) => h.mode === "offline" || h.mode === "hybrid");
+//   },
 
-  create: async (hackathon: Omit<Hackathon, "id" | "registeredCount" | "interestedCount" | "status">): Promise<Hackathon> => {
-    await delay(300);
-    return {
-      ...hackathon,
-      id: String(Date.now()),
-      registeredCount: 0,
-      interestedCount: 0,
-      status: "upcoming",
-    } as Hackathon;
-  },
+//   create: async (hackathon: Omit<Hackathon, "id" | "registeredCount" | "interestedCount" | "status">): Promise<Hackathon> => {
+//     await delay(300);
+//     return {
+//       ...hackathon,
+//       id: String(Date.now()),
+//       registeredCount: 0,
+//       interestedCount: 0,
+//       status: "upcoming",
+//     } as Hackathon;
+//   },
 
-  update: async (id: string, data: Partial<Hackathon>): Promise<Hackathon> => {
-    await delay(300);
-    const existing = mockHackathons.find((h) => h.id === id);
-    if (!existing) throw new Error("Hackathon not found");
-    return { ...existing, ...data };
-  },
+//   update: async (id: string, data: Partial<Hackathon>): Promise<Hackathon> => {
+//     await delay(300);
+//     const existing = mockHackathons.find((h) => h.id === id);
+//     if (!existing) throw new Error("Hackathon not found");
+//     return { ...existing, ...data };
+//   },
 
-  delete: async (id: string): Promise<void> => {
-    await delay(200);
-  },
+//   delete: async (id: string): Promise<void> => {
+//     await delay(200);
+//   },
 
-  markInterested: async (hackathonId: string, userId: string): Promise<void> => {
-    await delay(150);
-    // mock: nothing to persist
-  },
-};
+//   markInterested: async (hackathonId: string, userId: string): Promise<void> => {
+//     await delay(150);
+//     // mock: nothing to persist
+//   },
+// };
 
 /* REGISTRATION SERVICE */
 export const registrationService = {

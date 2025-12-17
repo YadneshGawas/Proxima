@@ -49,33 +49,57 @@ export interface Hackathon {
   // Computed UI fields
   registeredCount?: number;
   interestedCount?: number;
+  isInterested?: boolean;
+
   status?: 'upcoming' | 'ongoing' | 'completed';
   imageUrl?: string;
+  is_finalized?: boolean;
 
-  tags?: string[];
-
-  requirements?: string[];
-  prizes?: string[];
+   // 🔥 UI STRING FIELDS
+  requirementsText: string;
+  prizesText: string;
+  tagsText: string;
 }
 
 // ========================================
 // REGISTRATION
 // ========================================
-export type RegistrationStatus = 0 | 1 | 2;
-// 0 = pending, 1 = approved, 2 = rejected
+export type RegistrationStatus = "pending" | "approved" | "rejected";
+
+/* =========================
+   TEAM TYPES (ORGANIZER VIEW)
+========================= */
+
+export interface TeamMember {
+  user_id: number;
+  role: "owner" | "coleader" | "member";
+  joined_at: string;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  created_by: number;
+  members: TeamMember[];
+}
+
+/* =========================
+   REGISTRATION
+========================= */
 
 export interface Registration {
   id: string;
-  hackathonId: string;
+  hackathon_id: string;
 
-  userId?: string;           // individual registration
-  globalTeamId?: string;     // global team mode
-  hackathonTeamId?: string;  // temp hackathon team mode
+  user_id?: number | null;
+  team_id?: string | null;
 
-  registeredAt: string;
   status: RegistrationStatus;
-}
+  registered_at: string;
 
+  // 🔥 Organizer-only enrichment
+  team?: Team | null;
+}
 // ========================================
 // GLOBAL TEAMS
 // ========================================
@@ -104,23 +128,44 @@ export interface GlobalTeamMember {
 // ========================================
 // HACKATHON TEAMS
 // ========================================
-export interface HackathonTeam {
-  id: string;
-  hackathonId: string;
-  name: string;
-  createdById: string;
-  createdAt: string;
+// export interface HackathonTeam {
+//   id: string;
+//   hackathonId: string;
+//   name: string;
+//   createdById: string;
+//   createdAt: string;
 
-  members?: HackathonTeamMember[];
+//   members?: HackathonTeamMember[];
+// }
+
+// ========================================
+// HACKATHON TEAMS ✅ (BACKEND SOURCE OF TRUTH)
+// ========================================
+
+export type TeamMemberRole = "owner" | "coleader" | "member";
+
+// export interface HackathonTeamMember {
+//   id: string;
+//   hackathonTeamId: string;
+//   userId: string;
+//   joinedAt: string;
+
+//   user?: User;
+// }
+export interface HackathonTeamMember {
+  memberId: number;
+  name: string;
+  role: "owner" | "coleader" | "member";
+  joinedAt: string;
 }
 
-export interface HackathonTeamMember {
+export interface HackathonTeam {
   id: string;
-  hackathonTeamId: string;
-  userId: string;
-  joinedAt: string;
-
-  user?: User;
+  name: string;
+  createdBy: number;
+  createdAt: string;
+  membersCount: number;
+  members: HackathonTeamMember[];
 }
 
 // ========================================
