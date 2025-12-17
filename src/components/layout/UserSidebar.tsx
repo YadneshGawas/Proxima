@@ -1,5 +1,15 @@
-import { Home, Calendar, BarChart3, Mail, LogOut, Zap, Users, Coins } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  Home,
+  Calendar,
+  BarChart3,
+  Mail,
+  LogOut,
+  Zap,
+  Users,
+  Coins,
+  Rocket,
+} from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -11,47 +21,46 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   useSidebar,
-} from '@/components/ui/sidebar';
-import { NavLink } from '@/components/NavLink';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
+} from "@/components/ui/sidebar";
+import { NavLink } from "@/components/NavLink";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 
 const menuItems = [
-  { title: 'Home', url: '/dashboard', icon: Home },
-  { title: 'Hackathons', url: '/hackathons', icon: Calendar },
-  { title: 'Teams', url: '/teams', icon: Users },
-  { title: 'Credits', url: '/credits', icon: Coins },
-  { title: 'Analytics', url: '/analytics', icon: BarChart3 },
-  { title: 'Contact Us', url: '/contact', icon: Mail },
+  { title: "Home", url: "/dashboard", icon: Home },
+  { title: "Hackathons", url: "/hackathons", icon: Calendar },
+  { title: "Teams", url: "/teams", icon: Users },
+  { title: "Credits", url: "/credits", icon: Coins },
+  { title: "Analytics", url: "/analytics", icon: BarChart3 },
+  { title: "Contact Us", url: "/contact", icon: Mail },
+  { title: "Project Explorer", url: "/projects", icon: Rocket },
 ];
 
 export function UserSidebar() {
   const { state } = useSidebar();
-  const { logout, user, becomeOrganizer } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const collapsed = state === 'collapsed';
+  const collapsed = state === "collapsed";
 
   const handleLogout = async () => {
     await logout();
-    navigate('/');
+    navigate("/");
   };
 
-  const handleBecomeOrganizer = async () => {
-    await becomeOrganizer();
-    navigate('/admin');
-  };
+const handleRoleCTA = () => {
+  navigate("/admin/create-event");
+};
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border p-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Zap className="h-5 w-5" />
-          </div>
-          {!collapsed && (
-            <span className="text-lg font-bold text-sidebar-foreground">HackHub</span>
-          )}
+      <SidebarHeader className="border-b border-sidebar-border h-16 p-4">
+        <div className="flex items-center justify-center gap-2">
+          <img
+            src="/logo-4.png"
+            alt="logo"
+            className="h-8 w-8 object-contain"
+          />
         </div>
       </SidebarHeader>
 
@@ -77,28 +86,29 @@ export function UserSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {user?.role === 'user' && (
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <div className={collapsed ? 'px-2' : 'px-3'}>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={handleBecomeOrganizer}
-                >
-                  {collapsed ? (
-                    <Zap className="h-4 w-4" />
-                  ) : (
-                    <>
-                      <Zap className="mr-2 h-4 w-4" />
-                      Become Organizer
-                    </>
-                  )}
-                </Button>
-              </div>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+        {/* ROLE CTA */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <Button
+              variant="outline"
+              className={`w-full ${
+                collapsed ? "justify-center" : "justify-start"
+              }`}
+              onClick={handleRoleCTA}
+            >
+              {collapsed ? (
+                <Zap className="h-5 w-5" />
+              ) : (
+                <>
+                  <Zap className="h-5 w-5 mr-2" />
+                  Organizer Dashboard
+                </>
+              )}
+            </Button>
+
+            
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">

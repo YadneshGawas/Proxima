@@ -11,7 +11,9 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function Register() {
   const navigate = useNavigate();
-  const { register, loginWithGoogle, loginWithFacebook } = useAuth();
+  // const { register, loginWithGoogle, loginWithFacebook } = useAuth();
+  const { register } = useAuth();
+
   const { toast } = useToast();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -59,39 +61,39 @@ export default function Register() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setIsLoading(true);
-    try {
-      await loginWithGoogle();
-      toast({ title: 'Welcome!', description: 'Account created with Google.' });
-      navigate('/dashboard');
-    } catch (error) {
-      toast({
-        title: 'Google signup failed',
-        description: 'Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // const handleGoogleLogin = async () => {
+  //   setIsLoading(true);
+  //   try {
+  //     await loginWithGoogle();
+  //     toast({ title: 'Welcome!', description: 'Account created with Google.' });
+  //     navigate('/dashboard');
+  //   } catch (error) {
+  //     toast({
+  //       title: 'Google signup failed',
+  //       description: 'Please try again.',
+  //       variant: 'destructive',
+  //     });
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
-  const handleFacebookLogin = async () => {
-    setIsLoading(true);
-    try {
-      await loginWithFacebook();
-      toast({ title: 'Welcome!', description: 'Account created with Facebook.' });
-      navigate('/dashboard');
-    } catch (error) {
-      toast({
-        title: 'Facebook signup failed',
-        description: 'Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // const handleFacebookLogin = async () => {
+  //   setIsLoading(true);
+  //   try {
+  //     await loginWithFacebook();
+  //     toast({ title: 'Welcome!', description: 'Account created with Facebook.' });
+  //     navigate('/dashboard');
+  //   } catch (error) {
+  //     toast({
+  //       title: 'Facebook signup failed',
+  //       description: 'Please try again.',
+  //       variant: 'destructive',
+  //     });
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -170,13 +172,13 @@ export default function Register() {
             </Button>
           </form>
 
-          <div className="my-6 flex items-center gap-4">
+          {/* <div className="my-6 flex items-center gap-4">
             <Separator className="flex-1" />
             <span className="text-xs text-muted-foreground">OR</span>
             <Separator className="flex-1" />
-          </div>
+          </div> */}
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Button
               type="button"
               variant="outline"
@@ -199,7 +201,7 @@ export default function Register() {
               </svg>
               Continue with Facebook
             </Button>
-          </div>
+          </div> */}
         </CardContent>
         <CardFooter className="justify-center">
           <p className="text-sm text-muted-foreground">

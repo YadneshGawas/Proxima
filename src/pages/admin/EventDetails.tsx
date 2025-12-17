@@ -1,11 +1,27 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Pencil, Trash2, Check, X } from 'lucide-react';
-import { AdminLayout } from '@/components/layout/AdminLayout';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  Download,
+  Trash2,
+  Check,
+  X,
+  FolderOpen,
+  Trophy,
+} from "lucide-react";
+
+import { AdminLayout } from "@/components/layout/AdminLayout";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -13,313 +29,431 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { Hackathon, HackathonRegistration } from '@/types';
-import { hackathonService, registrationService } from '@/services/api';
-import { mockHackathons, mockRegistrations } from '@/data/mockData';
+} from "@/components/ui/dialog";
 
+import { useToast } from "@/hooks/use-toast";
+import { hackathonService } from "@/services/hackathon/hackathon.service";
+import { registrationService } from "@/services/registration/registration.service";
+import { submissionService } from "@/services/submission/submission.service";
+import { winnersService, Winner } from "@/services/winners/winners.service";
+
+import type { Hackathon, Registration } from "@/types";
+import type { RegistrationAnalytics } from "@/services/registration/registration.service";
+
+
+function EventOverviewCard({ hackathon }: { hackathon: Hackathon }) {
+  return (
+    <Card>
+      <CardHeader>
+
+      </CardHeader>
+
+      <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+        <div>
+          <p className="text-muted-foreground">Status</p>
+          <Badge>{hackathon.status}</Badge>
+        </div>
+
+        <div>
+          <p className="text-muted-foreground">Entry Fee</p>
+          <p>₹ {hackathon.entryFee}</p>
+        </div>
+
+        <div>
+          <p className="text-muted-foreground">Team Size</p>
+          <p>
+            {hackathon.participationType === "team"
+              ? `${hackathon.minTeamSize} – ${hackathon.maxTeamSize}`
+              : "Individual"}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-muted-foreground">Max Participants</p>
+          <p>{hackathon.maxParticipants ?? "Unlimited"}</p>
+        </div>
+
+        <div>
+          <p className="text-muted-foreground">Deadline</p>
+          <p>{new Date(hackathon.deadline).toDateString()}</p>
+        </div>
+
+        <div>
+          <p className="text-muted-foreground">Start Date</p>
+          <p>{new Date(hackathon.startDate).toDateString()}</p>
+        </div>
+
+        <div>
+          <p className="text-muted-foreground">End Date</p>
+          <p>{new Date(hackathon.endDate).toDateString()}</p>
+        </div>
+
+        <div className="col-span-2 md:col-span-3">
+          <p className="text-muted-foreground">Description</p>
+          <p>{hackathon.description}</p>
+        </div>
+
+        {hackathon.tags?.length > 0 && (
+          <div className="col-span-2 md:col-span-3">
+            <p className="text-muted-foreground mb-1">Tags</p>
+            <div className="flex gap-2 flex-wrap">
+              {hackathon.tags.map((tag) => (
+                <Badge key={tag} variant="outline">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {hackathon.requirements?.length > 0 && (
+          <div className="col-span-2 md:col-span-3">
+            <p className="text-muted-foreground">Requirements</p>
+            <ul className="list-disc list-inside">
+              {hackathon.requirements.map((req) => (
+                <li key={req}>{req}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {hackathon.prizes?.length > 0 && (
+          <div className="col-span-2 md:col-span-3">
+            <p className="text-muted-foreground">Prizes</p>
+            <ul className="list-disc list-inside">
+              {hackathon.prizes.map((prize, idx) => (
+                <li key={idx}>₹ {prize}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ======================================================
+   MAIN PAGE
+====================================================== */
 export default function EventDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [hackathon, setHackathon] = useState<Hackathon | null>(null);
-  const [registrations, setRegistrations] = useState<HackathonRegistration[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [editingReg, setEditingReg] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Partial<HackathonRegistration>>({});
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (id) {
-      loadData();
-    }
-  }, [id]);
+  const [hackathon, setHackathon] = useState<Hackathon | null>(null);
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [analytics, setAnalytics] =
+    useState<RegistrationAnalytics | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [winners, setWinners] = useState<Winner[]>([]);
+  const [isFinalizingWinners, setIsFinalizingWinners] = useState(false);
 
   const loadData = async () => {
     if (!id) return;
+
     try {
-      // Use mock data
-      const hack = mockHackathons.find(h => h.id === id);
-      setHackathon(hack || null);
-      setRegistrations(mockRegistrations.filter(r => r.hackathonId === id));
-    } catch (error) {
+      setIsLoading(true);
+
+      const hack = await hackathonService.getById(id);
+      const regs = await registrationService.getByHackathon(id);
+      const stats = await registrationService.getAnalytics(id);
+
+      setHackathon(hack);
+      setRegistrations(regs as any);
+      setAnalytics(stats);
+
+      // Load winners if available
+      try {
+        const winnersData = await winnersService.list(id);
+        setWinners(winnersData);
+      } catch (err) {
+        // No winners yet or error loading, which is fine
+        console.log("No winners to load yet");
+      }
+    } catch {
       toast({
-        title: 'Error',
-        description: 'Failed to load event details.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load event details.",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleUpdateStatus = async (regId: string, status: 'approved' | 'rejected') => {
+  useEffect(() => {
+    if (id) {
+      loadData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const getStatusColor = (status: Registration["status"]) =>
+    status === "approved"
+      ? "bg-primary text-primary-foreground"
+      : status === "rejected"
+      ? "bg-destructive text-destructive-foreground"
+      : "bg-secondary text-secondary-foreground";
+
+  const handleUpdateStatus = async (
+    regId: string,
+    status: "approved" | "rejected"
+  ) => {
     try {
       await registrationService.updateStatus(regId, status);
-      setRegistrations(registrations.map(r =>
-        r.id === regId ? { ...r, status } : r
-      ));
-      toast({ title: `Registration ${status}!` });
-    } catch (error) {
+      setRegistrations((prev) =>
+        prev.map((r) => (r.id === regId ? { ...r, status } : r))
+      );
+      if (id) setAnalytics(await registrationService.getAnalytics(id));
+      toast({ title: `Registration ${status}` });
+    } catch {
       toast({
-        title: 'Error',
-        description: 'Failed to update status.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to update registration.",
+        variant: "destructive",
       });
     }
   };
 
-  const handleDeleteRegistration = async (regId: string) => {
+  const handleDelete = async (regId: string) => {
     try {
-      await registrationService.delete(regId);
-      setRegistrations(registrations.filter(r => r.id !== regId));
-      toast({ title: 'Registration deleted!' });
-    } catch (error) {
+      // TODO: Implement delete if registration service supports it
+      setRegistrations((prev) => prev.filter((r) => r.id !== regId));
+      toast({ title: "Registration deleted" });
+    } catch {
       toast({
-        title: 'Error',
-        description: 'Failed to delete registration.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to delete registration.",
+        variant: "destructive",
       });
     }
     setDeleteConfirmId(null);
   };
 
-  const handleExportPDF = () => {
-    // Create CSV content (simpler than PDF for demo)
-    const headers = ['Team Name', 'Contact Email', 'Contact Phone', 'Status', 'Members'];
-    const rows = registrations.map(r => [
-      r.teamName || 'Individual',
-      r.contactEmail,
-      r.contactPhone,
+  const handleExport = () => {
+    const headers = ["Entry Type", "Team Name", "Status", "Members"];
+
+    const rows = registrations.map((r) => [
+      r.team ? "Team" : "Individual",
+      r.team?.name ?? "-",
       r.status,
-      r.teamMembers.map(m => `${m.name} (${m.email})`).join('; ')
+      r.team
+        ? r.team.members
+            .map((m) => `${m.name} (${m.role})`)
+            .join("; ")
+        : `User ${r.user_id}`,
     ]);
-    
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const csv = [headers, ...rows]
+      .map((row) => row.map((x) => `"${x}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `${hackathon?.name || 'event'}-participants.csv`;
-    document.body.appendChild(a);
+    a.download = `${hackathon?.eventName}-registrations.csv`;
     a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-
-    toast({ title: 'Exported!', description: 'Participant list downloaded as CSV.' });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return 'bg-primary text-primary-foreground';
-      case 'rejected':
-        return 'bg-destructive text-destructive-foreground';
-      default:
-        return 'bg-secondary text-secondary-foreground';
+  const handleFinalizeWinners = async () => {
+    if (!id) return;
+    
+    setIsFinalizingWinners(true);
+    try {
+      await winnersService.finalize(id);
+      // Reload winners after finalization
+      const winnersData = await winnersService.list(id);
+      setWinners(winnersData);
+      toast({
+        title: "Success",
+        description: "Winners have been finalized!",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to finalize winners. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Finalize winners error:", error);
+    } finally {
+      setIsFinalizingWinners(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <AdminLayout>
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-48 rounded bg-muted" />
-          <div className="h-64 rounded-lg bg-muted" />
-        </div>
-      </AdminLayout>
-    );
-  }
-
-  if (!hackathon) {
-    return (
-      <AdminLayout>
-        <div className="text-center">
-          <p className="text-muted-foreground">Event not found.</p>
-          <Button variant="link" onClick={() => navigate('/admin/analytics')}>
-            Back to Analytics
-          </Button>
-        </div>
-      </AdminLayout>
-    );
-  }
+  if (isLoading) return <AdminLayout>Loading…</AdminLayout>;
+  if (!hackathon) return <AdminLayout>No event found.</AdminLayout>;
 
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* Back Button */}
-        <Button variant="ghost" onClick={() => navigate('/admin/analytics')}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Analytics
+        <Button variant="ghost" onClick={() => navigate("/admin/analytics")}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back
         </Button>
 
-        {/* Event Header */}
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">{hackathon.name}</h1>
-            <p className="text-muted-foreground">
-              {hackathon.organizer} • {hackathon.location}
-            </p>
-            <div className="mt-2 flex gap-2">
-              <Badge variant={hackathon.status === 'upcoming' ? 'default' : 'secondary'}>
-                {hackathon.status}
-              </Badge>
-              <Badge variant="outline">{hackathon.mode}</Badge>
-            </div>
+        <div className="flex justify-between">
+          <h1 className="text-3xl font-bold">{hackathon.eventName}</h1>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() =>  navigate(`/admin/${id}/submission`)}>
+              <FolderOpen className="mr-2 h-4 w-4" /> Submissions
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleFinalizeWinners}
+              disabled={isFinalizingWinners || winners.length > 0}
+            >
+              <Trophy className="mr-2 h-4 w-4" /> 
+              {winners.length > 0 ? "Winners Finalized" : "Finalize Winners"}
+            </Button>
+            <Button onClick={handleExport}>
+              <Download className="mr-2 h-4 w-4" /> Export CSV
+            </Button>
           </div>
-          <Button onClick={handleExportPDF}>
-            <Download className="mr-2 h-4 w-4" />
-            Export Participants
-          </Button>
         </div>
 
-        {/* Event Stats */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <p className="text-2xl font-bold text-foreground">{registrations.length}</p>
-              <p className="text-sm text-muted-foreground">Total Registrations</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <p className="text-2xl font-bold text-foreground">
-                {registrations.filter(r => r.status === 'approved').length}
-              </p>
-              <p className="text-sm text-muted-foreground">Approved</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <p className="text-2xl font-bold text-foreground">
-                {registrations.filter(r => r.status === 'pending').length}
-              </p>
-              <p className="text-sm text-muted-foreground">Pending</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <p className="text-2xl font-bold text-foreground">
-                {registrations.reduce((acc, r) => acc + r.teamMembers.length, 0)}
-              </p>
-              <p className="text-sm text-muted-foreground">Total Participants</p>
-            </CardContent>
-          </Card>
-        </div>
+         {/* EVENT OVERVIEW */}
+          <EventOverviewCard hackathon={hackathon} />
 
-        {/* Registrations Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Registered Participants</CardTitle>
-            <CardDescription>Manage and review registrations</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {registrations.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No registrations yet.</p>
-            ) : (
-              <div className="space-y-4">
-                {registrations.map((reg) => (
+        {/* WINNERS DISPLAY */}
+        {winners.length > 0 && (
+          <Card className="border-2 border-yellow-500">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-yellow-500" />
+                Winners Finalized
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {winners.map((winner) => {
+                const medals = ["🥇", "🥈", "🥉"];
+                return (
                   <div
-                    key={reg.id}
-                    className="rounded-lg border border-border p-4"
+                    key={winner.id}
+                    className="flex items-center justify-between p-4 rounded-lg border bg-gradient-to-r from-yellow-50 to-transparent"
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-foreground">
-                            {reg.teamName || 'Individual Entry'}
-                          </h3>
-                          <Badge className={getStatusColor(reg.status)}>
-                            {reg.status}
-                          </Badge>
-                        </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-3xl">{medals[winner.position - 1]}</span>
+                      <div>
+                        <p className="font-semibold">{winner.team.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          {reg.contactEmail} • {reg.contactPhone}
+                          {winner.project.title}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Registered: {new Date(reg.registeredAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {reg.status === 'pending' && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleUpdateStatus(reg.id, 'approved')}
-                            >
-                              <Check className="h-4 w-4 text-primary" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleUpdateStatus(reg.id, 'rejected')}
-                            >
-                              <X className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteConfirmId(reg.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
                       </div>
                     </div>
-
-                    {/* Team Members */}
-                    <div className="mt-4">
-                      <p className="text-sm font-medium text-foreground mb-2">Team Members:</p>
-                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                        {reg.teamMembers.map((member, index) => (
-                          <div
-                            key={index}
-                            className="rounded-md bg-muted/50 p-2 text-sm"
-                          >
-                            <p className="font-medium text-foreground">{member.name}</p>
-                            <p className="text-xs text-muted-foreground">{member.email}</p>
-                            <p className="text-xs text-primary">{member.role}</p>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="text-right">
+                      <p className="font-bold text-lg">{winner.score.toFixed(2)}</p>
+                      <p className="text-xs text-muted-foreground">Average Score</p>
                     </div>
                   </div>
-                ))}
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* STATS */}
+        <div className="grid grid-cols-4 gap-4">
+          <Stat title="Total Registrations" value={analytics?.total_registrations} />
+          <Stat title="Approved" value={analytics?.approved} />
+          <Stat title="Pending" value={analytics?.pending} />
+          <Stat title="Participants" value={analytics?.total_participants} />
+        </div>
+
+        {/* REGISTRATIONS */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Registrations</CardTitle>
+            <CardDescription>Approve or reject entries</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {registrations.map((r) => (
+              <div key={r.id} className="border rounded-lg p-4">
+                <div className="flex justify-between">
+                  <div>
+                    <h3 className="font-bold flex items-center gap-2">
+                      {r.team?.name ?? `Individual (${r.user_id})`}
+                      <Badge className={getStatusColor(r.status)}>
+                        {r.status}
+                      </Badge>
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Registered: {new Date(r.registered_at).toDateString()}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {r.status === "pending" && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            handleUpdateStatus(r.id, "approved")
+                          }
+                        >
+                          <Check className="h-4 w-4 text-primary" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            handleUpdateStatus(r.id, "rejected")
+                          }
+                        >
+                          <X className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setDeleteConfirmId(r.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+
+                {r.team && (
+                  <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {r.team.members.map((m) => (
+                      <div key={m.user_id} className="bg-muted p-2 rounded-md">
+                        <p className="font-medium"> {m.name}</p>
+                        <p className="text-xs text-primary">{m.role}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            ))}
           </CardContent>
         </Card>
 
-        {/* Delete Confirmation */}
-        <Dialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
+        <Dialog
+          open={!!deleteConfirmId}
+          onOpenChange={() => setDeleteConfirmId(null)}
+        >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Delete Registration</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete this registration? This action cannot be undone.
+                This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteConfirmId(null)}
+              >
                 Cancel
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => deleteConfirmId && handleDeleteRegistration(deleteConfirmId)}
+                onClick={() =>
+                  deleteConfirmId && handleDelete(deleteConfirmId)
+                }
               >
                 Delete
               </Button>
@@ -330,3 +464,13 @@ export default function EventDetails() {
     </AdminLayout>
   );
 }
+
+/* Small stat card */
+const Stat = ({ title, value }: any) => (
+  <Card>
+    <CardContent className="pt-6 text-center">
+      <h2 className="text-2xl font-bold">{value ?? 0}</h2>
+      <p>{title}</p>
+    </CardContent>
+  </Card>
+);

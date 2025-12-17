@@ -33,7 +33,7 @@ export function TopBar() {
         <Button variant="ghost" size="icon" onClick={toggleSidebar}>
           <Menu className="h-5 w-5" />
         </Button>
-        <h1 className="text-xl font-semibold text-foreground">HackHub</h1>
+        <h1 className="text-xl font-semibold text-foreground">Proxima</h1>
       </div>
 
       <div className="flex items-center gap-2">

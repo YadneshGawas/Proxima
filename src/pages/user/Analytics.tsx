@@ -1,18 +1,26 @@
-import { useState, useEffect } from 'react';
-import { Trophy, Medal, Award, Calendar, TrendingUp } from 'lucide-react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { AnalyticsCard } from '@/components/AnalyticsCard';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect } from "react";
+import { Trophy, Medal, Award, Calendar, TrendingUp } from "lucide-react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { AnalyticsCard } from "@/components/AnalyticsCard";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
-  SelectContent,
-  SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
 import {
   BarChart,
   Bar,
@@ -25,13 +33,17 @@ import {
   Pie,
   Cell,
   Legend,
-} from 'recharts';
-import { useAuth } from '@/contexts/AuthContext';
-import { analyticsService } from '@/services/api';
-import { UserAnalytics, HackathonFilters } from '@/types';
+} from "recharts";
+
+import { useAuth } from "@/contexts/AuthContext";
+import { analyticsService } from "@/services/api";
+
+import { UserAnalytics, HackathonFilters } from "@/types";
 
 export default function Analytics() {
-  const { user } = useAuth();
+  // const { user } = useAuth();
+  // WARNING
+  const user = { id: "1" }; //Demo ID
   const [analytics, setAnalytics] = useState<UserAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<HackathonFilters>({});
@@ -46,39 +58,65 @@ export default function Analytics() {
       const data = await analyticsService.getUserAnalytics(user.id, filters);
       setAnalytics(data);
     } catch (error) {
-      console.error('Failed to load analytics:', error);
+      console.error("Failed to load analytics:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // ===================== PIE CHART DATA =====================
   const pieData = analytics
     ? [
-        { name: 'Wins', value: analytics.wins, color: 'hsl(var(--chart-1))' },
-        { name: 'Runner-up', value: analytics.runnerUp, color: 'hsl(var(--chart-2))' },
-        { name: 'Participated', value: analytics.losses, color: 'hsl(var(--chart-3))' },
+        {
+          name: "Wins",
+          value: analytics.wins,
+          color: "hsl(var(--chart-1))",
+        },
+        {
+          name: "Runner-up",
+          value: analytics.runnerUp,
+          color: "hsl(var(--chart-2))",
+        },
+        {
+          name: "Participated",
+          value: analytics.losses,
+          color: "hsl(var(--chart-3))",
+        },
       ]
     : [];
 
-  const barData = analytics?.participationHistory.slice(0, 6).map((record) => ({
-    name: record.hackathonName.slice(0, 15) + '...',
-    position: record.result === 'win' ? 1 : record.result === 'runner-up' ? 2 : 3,
-  })) || [];
+  // ===================== BAR CHART DATA =====================
+  const barData =
+    analytics?.participationHistory.slice(0, 6).map((record) => ({
+      name: record.hackathonName.slice(0, 15) + "...",
+      position:
+        record.result === "win"
+          ? 1
+          : record.result === "runner-up"
+          ? 2
+          : record.result === "second-runner-up"
+          ? 3
+          : 4, // loss or participated
+    })) || [];
 
+  // ===================== BADGE COLORS =====================
   const getResultColor = (result: string) => {
     switch (result) {
-      case 'win':
-        return 'bg-primary text-primary-foreground';
-      case 'runner-up':
-        return 'bg-secondary text-secondary-foreground';
+      case "win":
+        return "bg-primary text-primary-foreground";
+      case "runner-up":
+        return "bg-secondary text-secondary-foreground";
+      case "second-runner-up":
+        return "bg-yellow-500 text-black";
       default:
-        return 'bg-muted text-muted-foreground';
+        return "bg-muted text-muted-foreground";
     }
   };
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-foreground">Analytics</h1>
           <p className="text-muted-foreground">
@@ -94,14 +132,16 @@ export default function Analytics() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-3">
+              {/* Participation Type */}
               <div className="space-y-2">
                 <Label>Hackathon Type</Label>
                 <Select
-                  value={filters.participationType || 'all'}
+                  value={filters.participationType || "all"}
                   onValueChange={(value) =>
                     setFilters({
                       ...filters,
-                      participationType: value === 'all' ? undefined : value as any,
+                      participationType:
+                        value === "all" ? undefined : (value as any),
                     })
                   }
                 >
@@ -115,28 +155,38 @@ export default function Analytics() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Date Range Start */}
               <div className="space-y-2">
                 <Label>Start Date</Label>
                 <Input
                   type="date"
-                  value={filters.dateRange?.start || ''}
+                  value={filters.dateRange?.start || ""}
                   onChange={(e) =>
                     setFilters({
                       ...filters,
-                      dateRange: { ...filters.dateRange, start: e.target.value, end: filters.dateRange?.end || '' },
+                      dateRange: {
+                        ...filters.dateRange,
+                        start: e.target.value,
+                      },
                     })
                   }
                 />
               </div>
+
+              {/* Date Range End */}
               <div className="space-y-2">
                 <Label>End Date</Label>
                 <Input
                   type="date"
-                  value={filters.dateRange?.end || ''}
+                  value={filters.dateRange?.end || ""}
                   onChange={(e) =>
                     setFilters({
                       ...filters,
-                      dateRange: { ...filters.dateRange, end: e.target.value, start: filters.dateRange?.start || '' },
+                      dateRange: {
+                        ...filters.dateRange,
+                        end: e.target.value,
+                      },
                     })
                   }
                 />
@@ -153,25 +203,29 @@ export default function Analytics() {
             icon={<Calendar className="h-5 w-5" />}
             description="All time registrations"
           />
+
           <AnalyticsCard
             title="Wins"
             value={analytics?.wins || 0}
             icon={<Trophy className="h-5 w-5" />}
             description="First place finishes"
-            trend={{ value: 8, isPositive: true }}
           />
+
           <AnalyticsCard
             title="Runner-up"
             value={analytics?.runnerUp || 0}
             icon={<Medal className="h-5 w-5" />}
             description="Second/third place"
           />
+
           <AnalyticsCard
             title="Win Rate"
             value={
               analytics
-                ? `${Math.round((analytics.wins / analytics.totalRegistered) * 100)}%`
-                : '0%'
+                ? `${Math.round(
+                    (analytics.wins / analytics.totalRegistered) * 100
+                  )}%`
+                : "0%"
             }
             icon={<TrendingUp className="h-5 w-5" />}
             description="Overall performance"
@@ -180,11 +234,13 @@ export default function Analytics() {
 
         {/* Charts */}
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Performance Distribution */}
+          {/* PIE CHART */}
           <Card>
             <CardHeader>
               <CardTitle>Performance Distribution</CardTitle>
-              <CardDescription>Breakdown of your hackathon results</CardDescription>
+              <CardDescription>
+                Breakdown of your hackathon results
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
@@ -213,7 +269,7 @@ export default function Analytics() {
             </CardContent>
           </Card>
 
-          {/* Recent Performance */}
+          {/* BAR CHART */}
           <Card>
             <CardHeader>
               <CardTitle>Recent Performance</CardTitle>
@@ -226,18 +282,24 @@ export default function Analytics() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                     <YAxis
-                      domain={[0, 3]}
-                      ticks={[1, 2, 3]}
-                      tickFormatter={(value) =>
-                        value === 1 ? '1st' : value === 2 ? '2nd' : '3rd+'
+                      domain={[1, 4]}
+                      ticks={[1, 2, 3, 4]}
+                      tickFormatter={(v) =>
+                        v === 1
+                          ? "1st"
+                          : v === 2
+                          ? "2nd"
+                          : v === 3
+                          ? "3rd"
+                          : "Participated"
                       }
                     />
-                    <Tooltip
-                      formatter={(value: number) =>
-                        value === 1 ? '1st Place' : value === 2 ? '2nd Place' : 'Participated'
-                      }
+                    <Tooltip />
+                    <Bar
+                      dataKey="position"
+                      fill="hsl(var(--primary))"
+                      radius={[4, 4, 0, 0]}
                     />
-                    <Bar dataKey="position" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -245,27 +307,29 @@ export default function Analytics() {
           </Card>
         </div>
 
-        {/* Full History Table */}
+        {/* PARTICIPATION HISTORY TABLE */}
         <Card>
           <CardHeader>
             <CardTitle>Participation History</CardTitle>
-            <CardDescription>Complete record of your hackathon participation</CardDescription>
+            <CardDescription>
+              Complete record of your hackathon participation
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                    <th className="px-4 py-3 text-left text-sm text-muted-foreground">
                       Hackathon
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                      Team
+                    <th className="px-4 py-3 text-left text-sm text-muted-foreground">
+                      Team ID
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                    <th className="px-4 py-3 text-left text-sm text-muted-foreground">
                       Date
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                    <th className="px-4 py-3 text-left text-sm text-muted-foreground">
                       Result
                     </th>
                   </tr>
@@ -273,18 +337,18 @@ export default function Analytics() {
                 <tbody>
                   {analytics?.participationHistory.map((record, index) => (
                     <tr key={index} className="border-b border-border">
-                      <td className="px-4 py-3 text-sm text-foreground">
+                      <td className="px-4 py-3 text-sm">
                         {record.hackathonName}
                       </td>
-                      <td className="px-4 py-3 text-sm text-foreground">
-                        {record.teamName || '-'}
+                      <td className="px-4 py-3 text-sm">
+                        {record.teamId || "-"}
                       </td>
                       <td className="px-4 py-3 text-sm text-muted-foreground">
                         {new Date(record.date).toLocaleDateString()}
                       </td>
                       <td className="px-4 py-3">
                         <Badge className={getResultColor(record.result)}>
-                          {record.result.charAt(0).toUpperCase() + record.result.slice(1)}
+                          {record.result.replace("-", " ")}
                         </Badge>
                       </td>
                     </tr>

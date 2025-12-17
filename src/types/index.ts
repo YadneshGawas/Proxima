@@ -1,64 +1,204 @@
-// User Types
+// ========================================
+// USER
+// ========================================
 export interface User {
   id: string;
+  name?: string;
   email: string;
-  name: string;
-  avatar?: string;
-  role: 'user' | 'organizer';
+  avatar: string;
+  code: string;
   createdAt: string;
+  credits: number;
+
+  // Frontend-only role field (not in DB)
+  role: 'user' | 'organizer';
 }
 
+// Auth State
 export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
 
-// Hackathon Types
+// ========================================
+// HACKATHON
+// ========================================
 export interface Hackathon {
   id: string;
-  name: string;
-  description: string;
-  organizer: string;
   organizerId: string;
-  location: string;
+  eventName: string;
+  description?: string;
+  location?: string;
   mode: 'online' | 'offline' | 'hybrid';
-  teamSize: { min: number; max: number };
-  deadline: string;
-  startDate: string;
-  endDate: string;
-  postedOn: string;
-  tags: string[];
-  entryFee?: number;
-  prizes?: string[];
-  requirements?: string[];
+
   participationType: 'individual' | 'team';
+  minTeamSize?: number;
+  maxTeamSize?: number;
+
+  deadline?: string;
+  startDate?: string;
+  endDate?: string;
+
+  entryFee: number;
   maxParticipants?: number;
-  registeredCount: number;
-  interestedCount: number;
+
+  createdAt: string;
+  archiveSnapshotId?: string;
+
+  // Computed UI fields
+  registeredCount?: number;
+  interestedCount?: number;
+  isInterested?: boolean;
+
+  status?: 'upcoming' | 'ongoing' | 'completed';
   imageUrl?: string;
-  status: 'upcoming' | 'ongoing' | 'completed';
+  is_finalized?: boolean;
+
+   // 🔥 UI STRING FIELDS
+  requirementsText: string;
+  prizesText: string;
+  tagsText: string;
 }
 
-export interface HackathonRegistration {
-  id: string;
-  hackathonId: string;
-  userId: string;
-  teamName?: string;
-  teamMembers: TeamMember[];
-  contactEmail: string;
-  contactPhone: string;
-  status: 'pending' | 'approved' | 'rejected';
-  registeredAt: string;
-}
+// ========================================
+// REGISTRATION
+// ========================================
+export type RegistrationStatus = "pending" | "approved" | "rejected";
+
+/* =========================
+   TEAM TYPES (ORGANIZER VIEW)
+========================= */
 
 export interface TeamMember {
-  name: string;
-  email: string;
-  role: string;
+  user_id: number;
+  role: "owner" | "coleader" | "member";
+  joined_at: string;
 }
 
-// User Analytics
+export interface Team {
+  id: string;
+  name: string;
+  created_by: number;
+  members: TeamMember[];
+}
+
+/* =========================
+   REGISTRATION
+========================= */
+
+export interface Registration {
+  id: string;
+  hackathon_id: string;
+
+  user_id?: number | null;
+  team_id?: string | null;
+
+  status: RegistrationStatus;
+  registered_at: string;
+
+  // 🔥 Organizer-only enrichment
+  team?: Team | null;
+}
+// ========================================
+// GLOBAL TEAMS
+// ========================================
+export interface GlobalTeam {
+  id: string;
+  name: string;
+  description?: string;
+  ownerId: string;
+  teamCode: string;
+  isPublic: boolean;
+  createdAt: string;
+
+  members?: GlobalTeamMember[];
+}
+
+export interface GlobalTeamMember {
+  id: string;
+  teamId: string;
+  userId: string;
+  role?: string; // leader / co-lead / member
+  joinedAt: string;
+
+  user?: User;
+}
+
+// ========================================
+// HACKATHON TEAMS
+// ========================================
+// export interface HackathonTeam {
+//   id: string;
+//   hackathonId: string;
+//   name: string;
+//   createdById: string;
+//   createdAt: string;
+
+//   members?: HackathonTeamMember[];
+// }
+
+// ========================================
+// HACKATHON TEAMS ✅ (BACKEND SOURCE OF TRUTH)
+// ========================================
+
+export type TeamMemberRole = "owner" | "coleader" | "member";
+
+// export interface HackathonTeamMember {
+//   id: string;
+//   hackathonTeamId: string;
+//   userId: string;
+//   joinedAt: string;
+
+//   user?: User;
+// }
+export interface HackathonTeamMember {
+  memberId: number;
+  name: string;
+  role: "owner" | "coleader" | "member";
+  joinedAt: string;
+}
+
+export interface HackathonTeam {
+  id: string;
+  name: string;
+  createdBy: number;
+  createdAt: string;
+  membersCount: number;
+  members: HackathonTeamMember[];
+}
+
+// ========================================
+// WINNERS
+// ========================================
+export interface Winner {
+  id: string;
+  hackathonId: string;
+  hackathonTeamId: string;
+  position: number; // 1 = Winner, 2 = Runner-up, 3 = Second Runner-up
+  projectTitle: string;
+  projectDesc: string;
+  gitUrl: string;
+  liveUrl: string;
+  createdAt: string;
+}
+
+// ========================================
+// PAYMENTS
+// ========================================
+export interface Payment {
+  id: string;
+  userId: string;
+  hackathonId: string;
+  amount: number;
+  currency: string;
+  status: string; // usually "completed"
+  createdAt: string;
+}
+
+// ========================================
+// USER ANALYTICS (frontend derived)
+// ========================================
 export interface UserAnalytics {
   totalRegistered: number;
   wins: number;
@@ -71,12 +211,14 @@ export interface ParticipationRecord {
   hackathonId: string;
   hackathonName: string;
   date: string;
-  result: 'win' | 'runner-up' | 'loss' | 'pending';
+  result: 'win' | 'runner-up' | 'second-runner-up' | 'pending' | 'loss';
   position?: number;
-  teamName?: string;
+  teamId?: string; // from global or hackathon team
 }
 
-// Admin Analytics
+// ========================================
+// ADMIN ANALYTICS (frontend derived)
+// ========================================
 export interface AdminAnalytics {
   totalHackathons: number;
   averageTeamsPerHackathon: number;
@@ -93,7 +235,9 @@ export interface HackathonStat {
   bookingAmount: number;
 }
 
-// Notification
+// ========================================
+// NOTIFICATIONS (frontend)
+// ========================================
 export interface Notification {
   id: string;
   title: string;
@@ -105,7 +249,9 @@ export interface Notification {
   createdAt: string;
 }
 
-// Filter Types
+// ========================================
+// FILTERS
+// ========================================
 export interface HackathonFilters {
   mode?: 'online' | 'offline' | 'hybrid';
   participationType?: 'individual' | 'team';
@@ -114,39 +260,9 @@ export interface HackathonFilters {
   organizer?: string;
 }
 
-// Team Types
-export interface Team {
-  id: string;
-  name: string;
-  code: string;
-  description: string;
-  ownerId: string;
-  ownerName: string;
-  members: TeamMemberInfo[];
-  isPublic: boolean;
-  createdAt: string;
-}
-
-export interface TeamMemberInfo {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  role: string;
-  joinedAt: string;
-}
-
-export interface TeamInvite {
-  id: string;
-  teamId: string;
-  code: string;
-  createdBy: string;
-  expiresAt: string;
-  uses: number;
-  maxUses?: number;
-}
-
-// Credits Types
+// ========================================
+// CREDITS (frontend)
+// ========================================
 export interface UserCredits {
   balance: number;
   transactions: CreditTransaction[];
