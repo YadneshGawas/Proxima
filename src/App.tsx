@@ -49,7 +49,6 @@ const App = () => (
               {/* User Routes */}
               <Route element={<ProtectedRoute/>}>
               <Route path="/dashboard" element={<Dashboard />} />
-              </Route>
               <Route path="/hackathons" element={<Hackathons />} />
               <Route path="/hackathons/:id" element={<HackathonDetail />} />
               <Route path="/teams" element={<Teams />} />
@@ -60,10 +59,7 @@ const App = () => (
               <Route path="/hackathons/:id/HackathonWinners" element={<HackathonWinners />} />
               <Route path="/projects" element={<ProjectExplorer />} />
               <Route path="/teams/create" element={<CreateTeam />} />
-
-              
-              
-              {/* Admin Routes */}
+               {/* Admin Routes */}
               <Route path="/admin/create-event" element={<CreateEvent />} />
               <Route path="/admin/analytics" element={<AdminAnalytics />} />
               <Route path="/admin/events/:id" element={<EventDetails />} />
@@ -73,6 +69,13 @@ const App = () => (
               
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
+              
+              </Route>
+             
+
+              
+              
+             
             </Routes>
           </TooltipProvider>
         </AuthProvider>
